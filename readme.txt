@@ -168,17 +168,44 @@ WordPress 4.1.1 compatibility is checked and some bugs are fixed. Upgrade is rec
 
 See also ChangeLog file contained in the archive.
 
+= 2.0.0 =
+* New DB Explorer
+* Code refactoring
+* WordPress 6.0 compatibility checked
+* Fixed compatibility with PHP 7.4/8.0/8.1
+
+= 1.8.1 (2015-03-18) =
+* version 1.8.1 bugfix release.
+* pdoengine.class.php: bugfix. database file existent chech doesn't work properly, which causes installation problem.
+
 = 1.8 (2015-03-06) =
 * Fixed the bug about install process algorithm.
 * Fixed the index query regexp, which may cause a problem to some plugins.
 * Solved PHP 5.2.x compatibility issue.
+* query_create.class.php: fixed the index query regexp.
+* query.class.php: added 'orderby_callback' method. This is a workaround for PHP 5.2.x compatibility issue.
+
+= 1.8 (2015-03-06) =
+* pdodb.class.php: removed the unnecessary require directive.
+* pdoengin.class.php: revised install process algorithm.
+	  Database directory and file check was too late.
+	  Changed the database directory permission.
+
+= 1.7 (2014-10-01) =
+* pdoengine.class.php: revised pdoengine class constructor definition in order to reuse the PDO instance.
+* pdodb.class.php, pdoengine.class.php: moved the foreign key check from PDODB class to PDOEngine class init() method.
+* functions.php, functions-5-2.php: check if PDO instance is not null to avoid displaying Zend debugger/Xdebug messages. If null, constructor executes wp_die() function.
+* query_create.class.php: changed the data type rewriting method.
+When a field name is the same as data type, e.g. "date" or "timestamp", add a single quote to the field name and avoid to be rewritten.
+This works only if the field name is on the top of the line, according to the rule of dbDelta() function.
+Added the new function to quote illegal field name, e.g. "default" or "values", for SQLite. This is for the plugins that use those names to create tables without errors.
 
 = 1.7 (2014-09-05) =
 * Fixed the bug about changing the order of the attachment file in the editor screen.
 * Fixed the bug about the manipulation of CREATE query.
 * Added an 128x128 icon and 256x256 icon.
 * Change for checking the user defined value of pcre.backtrack_limit and using it.
-* WordPress 4.0 compatibilitiy checked.
+* WordPress 4.0 compatibility checked.
 
 = 1.6.3 (2014-05-10) =
 * Fixed the bug about manipulating meta query with BETWEEN comparison.
@@ -260,3 +287,12 @@ See also ChangeLog file contained in the archive.
 
 = 1.0 (2013-07-07) =
 * First release version of the plugin.
+
+
+== Bugs ==
+* Version 1.7 can't create wp-config.php when installing with WordPress 4.0
+	When install process notices that there's no wp-config.php, it tries to
+	create one from wp-config-sample.php. During that time, WordPress unsets
+	global $wpdb and calls require_wp_db() function.
+	That function newly instantiates wpdb class. SQLite Integration has no
+	way of intercepting that process.

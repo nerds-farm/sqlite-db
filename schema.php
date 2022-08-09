@@ -18,8 +18,8 @@ if (!defined('ABSPATH')) {
  * @return boolean
  */
 function make_db_sqlite() {
-	include_once PDODIR . 'query_create.class.php';
-	include_once ABSPATH . 'wp-admin/includes/schema.php';
+	include_once SQLITE_DB_PATH . 'class'.DIRECTORY_SEPARATOR.'query_create.php';
+	include_once ABSPATH . 'wp-admin'.DIRECTORY_SEPARATOR.'includes'.DIRECTORY_SEPARATOR.'schema.php';
 	$index_array   = array();
 
 	//ob_end_clean();
@@ -27,7 +27,7 @@ function make_db_sqlite() {
 	$queries       = explode (";", $table_schemas);
 	$query_parser  = new CreateQuery();
 	try {
-		$pdo = new PDO('sqlite:'.FQDB, null, null, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+		$pdo = new PDO('sqlite:'.DB_SQLITE, null, null, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
 	} catch (PDOException $err) {
 		$err_data = $err->errorInfo;
 		$message  = 'Database connection error!<br />';

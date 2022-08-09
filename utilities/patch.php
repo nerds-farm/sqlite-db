@@ -298,15 +298,15 @@ class PatchUtils {
         }
         if (isset($_GET['page']) && $_GET['page'] == 'patch') :
             ?>
-                    <?php include_once SQLITE_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
+            <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
             <div class="wrap" id="sqlite-admin-wrap">
                 <h2><?php _e('Patch Files Upload and Apply', $domain); ?></h2>
                 <h3><?php _e('What you can do in this page', $domain); ?></h3>
                 <p>
-            <?php _e('I made patch files for some plugins that are incompatible with SQLite Integration and need rewriting. And I wrote in the <a href="http://dogwood.skr.jp/wordpress/sqlite-integration">Plugin Page</a> about how to apply a patch file to the plugin. But the command line interface sometimes embarrasses some people, especially newbies.', $domain); ?>
+                    <?php _e('I made patch files for some plugins that are incompatible with SQLite Integration and need rewriting. And I wrote in the <a href="http://dogwood.skr.jp/wordpress/sqlite-integration">Plugin Page</a> about how to apply a patch file to the plugin. But the command line interface sometimes embarrasses some people, especially newbies.', $domain); ?>
                 </p>
                 <p>
-            <?php _e('In this page, you can upload patch files and apply them automatically. But there are some requirements.', $domain) ?>
+                    <?php _e('In this page, you can upload patch files and apply them automatically. But there are some requirements.', $domain) ?>
                 </p>
                 <ol>
                     <li><?php _e('Think before you leap. Is the plugin to which you are going to apply patch really necessary for your site? Did you search in the <a href="http://wordpress.org/extend/plugins/">Plugin Directory</a> for the substitutes?', $domain) ?></li>
@@ -315,10 +315,10 @@ class PatchUtils {
                     <li><?php _e('Your PHP script can execute &quot;patch&quot; shell command.(Script will check if it is executable or not.)', $domain); ?></li>
                 </ol>
                 <p>
-            <?php _e('If uploading fails, it\' very likely that application will fail. When you try uploading with FTP client, the patch files must be put into the directory wp-content/uploads/patches/. When constant UPLOADS is defined, script follows it.', $domain) ?>
+                    <?php _e('If uploading fails, it\' very likely that application will fail. When you try uploading with FTP client, the patch files must be put into the directory wp-content/uploads/patches/. When constant UPLOADS is defined, script follows it.', $domain) ?>
                 </p>
                 <p>
-            <?php _e('You can create your patch file yourself. When you create one, please test it on your local server first and check if it works fine without PHP error or notice ( set error_reporting(E_ALL) ). If you use this utility, name your patch file as follows:', $domain); ?>
+                    <?php _e('You can create your patch file yourself. When you create one, please test it on your local server first and check if it works fine without PHP error or notice ( set error_reporting(E_ALL) ). If you use this utility, name your patch file as follows:', $domain); ?>
                 </p>
                 <ol>
                     <li><?php _e('Use the file name beginning with the plugin directory name.', $domain); ?></li>
@@ -327,7 +327,7 @@ class PatchUtils {
                     <li><?php _e('Use diff command options &quot;-Naur&quot;.', $domain); ?></li>
                 </ol>
                 <p>
-            <?php _e('For example, the patch file for the plugin &quot;Debug Bar&quot; is &quot;debug-bar_0.8.patch&quot;. Script interprets &quot;debug-bar&quot; as the target directory and &quot;0.8&quot; as the target version. If the version number doesn\'t match with the target, script shows the error message and skip applying the patch file. And script will reject any other file name.', $domain); ?>
+                    <?php _e('For example, the patch file for the plugin &quot;Debug Bar&quot; is &quot;debug-bar_0.8.patch&quot;. Script interprets &quot;debug-bar&quot; as the target directory and &quot;0.8&quot; as the target version. If the version number doesn\'t match with the target, script shows the error message and skip applying the patch file. And script will reject any other file name.', $domain); ?>
                 </p>
 
                 <h3><?php _e('How to install, patch and activate plugins', $domain); ?></h3>
@@ -338,7 +338,7 @@ class PatchUtils {
                 </ol>
                 <h3><?php _e('How to upgrade plugins', $domain); ?></h3>
                 <p>
-            <?php _e('When upgrading the plugin, it will be safer to follow next steps.', $domain); ?>
+                    <?php _e('When upgrading the plugin, it will be safer to follow next steps.', $domain); ?>
                 </p>
                 <ol>
                     <li><?php _e('Deactivate the plugin', $domain); ?></li>
@@ -354,11 +354,11 @@ class PatchUtils {
                             <th scope="row"><?php _e('File Select', $domain); ?></th>
                             <td>
                                 <form action="" id="upload-form" class="wp-upload-form" method="post" enctype="multipart/form-data">
-            <?php
-            if (function_exists('wp_nonce_field')) {
-                wp_nonce_field('sqlitewordpress-plugin-patch-file-stats');
-            }
-            ?>
+                                    <?php
+                                    if (function_exists('wp_nonce_field')) {
+                                        wp_nonce_field('sqlitewordpress-plugin-patch-file-stats');
+                                    }
+                                    ?>
                                     <input type="hidden" name="MAX_FILE_SIZE" value="500000" />
                                     <label for="upload"><?php _e('Select file from your computer. If the file name is the same as existent file, this operation will override it. You can\'t upload the file whose size is over 500kB.', $domain); ?></label><br />
                                     <input type="file" id="upload" name="upfile" size="60"/>
@@ -370,11 +370,11 @@ class PatchUtils {
                             <th scope="row"><?php _e('Patch files uploaded', $domain) ?></th>
                             <td>
                                 <form action="" method="post">
-            <?php
-            if (function_exists('wp_nonce_field')) {
-                wp_nonce_field('sqlitewordpress-plugin-manip-stats');
-            }
-            ?>
+                                    <?php
+                                    if (function_exists('wp_nonce_field')) {
+                                        wp_nonce_field('sqlitewordpress-plugin-manip-stats');
+                                    }
+                                    ?>
                                     <label for="plugin_check"><?php _e('Select the file(s) you want to apply to the plugin(s) or you want to delete. You can select multiple files.', $domain); ?></label>
                                     <table class="widefat page fixed" id="patch-files">
                                         <thead>
@@ -384,15 +384,16 @@ class PatchUtils {
                                             </tr>
                                         </thead>
                                         <tbody>
-            <?php $files = $this->get_patch_files();
-            if (!empty($files)) :
-                ?>
+                                            <?php
+                                            $files = $this->get_patch_files();
+                                            if (!empty($files)) :
+                                                ?>
                 <?php foreach ($files as $file) : ?>
                                                     <tr data-table='{"name":"<?php echo $file ?>"}'>
                                                         <td><input type="checkbox" id="plugin_check" name="plugin_checked[]" value="<?php echo $file ?>"/></td>
                                                         <td><?php echo $file ?></td>
                                                     </tr>
-                <?php endforeach; ?>
+                                                <?php endforeach; ?>
             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -417,7 +418,7 @@ class PatchUtils {
                     </p>
                 </blockquote>
             </div>
-        <?php
+            <?php
         endif;
     }
 

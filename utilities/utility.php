@@ -68,14 +68,14 @@ class SQLiteIntegrationUtils {
     /**
      * Method to read a error log file and returns its contents.
      *
-     * 'FQDBDIR/debug.txt' is the log file name.
+     * 'DB_PATH/debug.txt' is the log file name.
      * If this file is not existent, returns false.
      *
      * @return string|boolean
      * @access private
      */
     private function show_error_log() {
-        $file = FQDBDIR . 'debug.txt';
+        $file = DB_PATH . 'debug.txt';
         if (file_exists($file)) {
             $contents = file_get_contents($file);
             return $contents;
@@ -92,7 +92,7 @@ class SQLiteIntegrationUtils {
      */
     private function clear_log_file() {
         $result = false;
-        $file = FQDBDIR . 'debug.txt';
+        $file = DB_PATH . 'debug.txt';
         $fh = fopen($file, "w+");
         if ($fh) {
             if (flock($fh, LOCK_EX)) {
@@ -282,7 +282,7 @@ class SQLiteIntegrationUtils {
      * @access private
      */
     private function update_db_file() {
-        $new_file = PDODIR . 'db.php';
+        $new_file = SQLITE_DB_PATH . 'db.php';
         if (file_exists($new_file) && is_readable($new_file)) {
             $contents = file_get_contents($new_file);
         } else {
@@ -329,7 +329,7 @@ class SQLiteIntegrationUtils {
      * @access private
      */
     private function get_database_size() {
-        $db_file = FQDB;
+        $db_file = DB_SQLITE;
         if (file_exists($db_file)) {
             $size = filesize($db_file);
             clearstatcache(true, $db_file);
@@ -480,17 +480,17 @@ class SQLiteIntegrationUtils {
     }
 
     /**
-     * Method to parse FQDBDIR and return backup database files.
+     * Method to parse DB_PATH and return backup database files.
      *
      * @return nothing returned.
      * @access private
      */
     private function get_backup_files() {
-        $db_name = basename(FQDB);
+        $db_name = basename(DB_SQLITE);
         $names_to_exclude = array('.', '..', '.htaccess', 'debug.txt', '.ht.sqlite', 'index.php', $db_name);
         $backup_files = array();
-        if (is_dir(FQDBDIR)) {
-            if ($dir_handle = opendir(FQDBDIR)) {
+        if (is_dir(DB_PATH)) {
+            if ($dir_handle = opendir(DB_PATH)) {
                 while (($file_name = readdir($dir_handle)) !== false) {
                     if (in_array($file_name, $names_to_exclude))
                         continue;
@@ -510,8 +510,8 @@ class SQLiteIntegrationUtils {
     private function backup_db() {
         $domain = $this->text_domain;
         $result = array();
-        $database_file = FQDB;
-        $db_name = basename(FQDB);
+        $database_file = DB_SQLITE;
+        $db_name = basename(DB_SQLITE);
         if (!file_exists($database_file)) {
             return false;
         }
@@ -555,7 +555,7 @@ class SQLiteIntegrationUtils {
         } else {
             return false;
         }
-        if (chdir(FQDBDIR)) {
+        if (chdir(DB_PATH)) {
             foreach ($file_names as $file) {
                 if (unlink($file)) {
                     $results[$file] = sprintf(__('File %s was deleted.', $domain), $file);
@@ -597,7 +597,7 @@ class SQLiteIntegrationUtils {
             if (count($file_names) != 1)
                 return 2;
             $file_name = $file_names[0];
-            $file_path = FQDBDIR . $file_name;
+            $file_path = DB_PATH . $file_name;
             $blog_name = str_replace(array(' ', '　', ';'), array('_', '_', '_'), get_bloginfo('name'));
             $download_file_name = $blog_name . '_' . $file_name;
             header('Pragma: public');
@@ -624,51 +624,112 @@ class SQLiteIntegrationUtils {
      */
     function welcome() {
         $domain = $this->text_domain;
-        if (isset($_GET['page']) && $_GET['page'] == 'sqlite-integration') :
+        if (isset($_GET['page']) && $_GET['page'] == 'sqlite-db') {
             ?>
             <div class="wrap single" id="sqlite-admin-wrap">
                 <h2><?php _e('Welcome to SQLite Integration', $domain) ?></h2>
                 <p>
-            <?php _e('Thank you for using SQLite Integration plugin!', $domain) ?>
+                    <?php _e('Thank you for using SQLite Integration plugin!', $domain) ?>
                 </p>
-                <p>
-            <?php _e('You read this message, which means you have succeeded in installing WordPress with this plugin SQLite Integration. Congratulations and enjoy your Blogging!', $domain) ?>
-                </p>
-                <p>
-            <?php _e('You don\'t have to set any special settings. In fact there are no other settings. You can write articles or pages and customize you WordPress in an ordinary way. You want to install your plugins? All right, go ahead. But some of them may be incompatible with this. Please read more information about this plugin and your SQLite database below.', $domain) ?>
-                </p>
-                <p><?php _e('Deactivation makes this documents and utilities disappear from the dashboard, but it doesn\'t affect the functionality of the SQLite Integration. when uninstalled, it will remove wp-content/uploads/patches directory (if exists) and wp-content/db.php file altogether.', $domain); ?></p>
-                <table class="widefat" cellspacing="0" id="menu">
-                    <thead>
-                    <th><?php _e('Title', $domain); ?></th>
-                    <th><?php _e('Contents', $domain); ?></th>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=doc"><?php _e('Documentation', $domain) ?></a></td>
-                            <td><?php _e('You can read documentation about this plugin and plugin compatibility.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=sys-info"><?php _e('System Info', $domain) ?></a></td>
-                            <td><?php _e('You can see database and system information.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=setting-file"><?php _e('Miscellaneous', $domain) ?></a></td>
-                            <td><?php _e('You can see the error log and edit db.php file (if necessary) and optimize your database.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td><a href="<?php echo $this->show_parent(); ?>?page=patch"><?php _e('Patch Utility', $domain) ?></a></td>
-                            <td><?php _e('You can upload patch files and apply them to the incompatible plugins.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td><a href="<?php echo $this->show_parent(); ?>?page=maintenance"><?php _e('Maintenance', $domain); ?></a></td>
-                            <td><?php _e('You can check your database and fix it if needed.', $domain); ?></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        <?php
-        endif;
+
+                <a href="?page=sqlite-db&action=clone" class="button">1. Clone current MySQL to SQLite</a>
+                <br><br>
+                <?php 
+                $tmp = DB_PATH.'*.sqlite';
+                //var_dump($tmp);
+                $dbs = array_merge(glob(DB_PATH.'.*.sqlite'), glob($tmp));//glob($tmp);
+                if (!empty($dbs)) { ?>
+                <form action="?" method="GET">
+                    <input type="hidden" name="page" value="sqlite-db" />
+                    <input type="hidden" name="action" value="set" />
+                    <input type="submit" value="2. Set SQLite DB File" class="button">
+                    <select name="db_sqlite">
+                        <?php
+                            
+                            foreach ($dbs as $sdb) { 
+                                $sdb = str_replace('/', DIRECTORY_SEPARATOR, $sdb);
+                                $selected = (defined('DB_SQLITE') && DB_SQLITE == $sdb) ? ' selected' : '';
+                                ?>
+                                <option value="<?php echo $sdb; ?>"<?php echo $selected; ?>><?php echo $sdb; ?></option>
+                            <?php }
+                        ?>
+                    </select>
+                    
+                </form>
+                
+                <?php if (defined('DB_SQLITE')) { ?>
+                <br>
+                <?php if (defined('DB_PDO') && DB_PDO == 'sqlite') { ?>
+                    <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning"><?php _e('Revert to MySQL DB'); ?></a>
+                <?php } else { ?>
+                    <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning">3. <?php _e('Switch to SQLite DB'); ?></a>
+                <?php
+                    }
+                } 
+                } ?>
+                
+                <br>
+                <br>
+                <hr>
+                
+                    
+                    
+                <?php
+                if (defined('SQLITE_DB_PATH')) {
+                    ?>
+                    <p>
+                        <?php _e('You read this message, which means you have succeeded in installing WordPress with this plugin SQLite Integration. Congratulations and enjoy your Blogging!', $domain) ?>
+                    </p>
+                    <p>
+                        <?php _e('You don\'t have to set any special settings. In fact there are no other settings. You can write articles or pages and customize you WordPress in an ordinary way. You want to install your plugins? All right, go ahead. But some of them may be incompatible with this. Please read more information about this plugin and your SQLite database below.', $domain) ?>
+                    </p>
+                    <p><?php _e('Deactivation makes this documents and utilities disappear from the dashboard, but it doesn\'t affect the functionality of the SQLite Integration. when uninstalled, it will remove wp-content/uploads/patches directory (if exists) and wp-content/db.php file altogether.', $domain); ?></p>
+                    <table class="widefat" cellspacing="0" id="menu">
+                        <thead>
+                        <th><?php _e('Title', $domain); ?></th>
+                        <th><?php _e('Contents', $domain); ?></th>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=doc"><?php _e('Documentation', $domain) ?></a></td>
+                                <td><?php _e('You can read documentation about this plugin and plugin compatibility.', $domain) ?></td>
+                            </tr>
+                            <tr>
+                                <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=sys-info"><?php _e('System Info', $domain) ?></a></td>
+                                <td><?php _e('You can see database and system information.', $domain) ?></td>
+                            </tr>
+                            <tr>
+                                <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=setting-file"><?php _e('Miscellaneous', $domain) ?></a></td>
+                                <td><?php _e('You can see the error log and edit db.php file (if necessary) and optimize your database.', $domain) ?></td>
+                            </tr>
+                            <tr>
+                                <td><a href="<?php echo $this->show_parent(); ?>?page=patch"><?php _e('Patch Utility', $domain) ?></a></td>
+                                <td><?php _e('You can upload patch files and apply them to the incompatible plugins.', $domain) ?></td>
+                            </tr>
+                            <tr>
+                                <td><a href="<?php echo $this->show_parent(); ?>?page=maintenance"><?php _e('Maintenance', $domain); ?></a></td>
+                                <td><?php _e('You can check your database and fix it if needed.', $domain); ?></td>
+                            </tr>
+                            <tr>
+                                <td><a href="<?php echo $this->show_parent(); ?>?page=explorer"><?php _e('Explorer', $domain); ?></a></td>
+                                <td><?php _e('You can read, edit and execute Custom SQL on your DB.', $domain); ?></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <?php
+            } else {
+                // Import from MySQL
+                ?>
+                <h3>
+                    <?php _e('Import and Switch to SQLITE DB!', $domain) ?>
+                </h3>
+                <a href="?page=sqlite-db&action=import">Import</a>
+
+                <?php
+                // 
+            }
+        }
     }
 
     /**
@@ -684,7 +745,7 @@ class SQLiteIntegrationUtils {
         }
         if (isset($_GET['page']) && $_GET['page'] == 'sys-info') :
             ?>
-            <?php include_once SQLITE_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
+            <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
             <div class="wrap" id="sqlite-admin-wrap">
                 <h2><?php _e('System Information', $domain) ?></h2>
                 <h3><?php _e('PHP Informations', $domain) ?></h3>
@@ -733,7 +794,7 @@ class SQLiteIntegrationUtils {
                         </tr>
                     </thead>
                     <tbody>
-                                <?php $status = $this->get_database_status(); ?>
+            <?php $status = $this->get_database_status(); ?>
                         <tr>
                             <td><?php _e('Database Size', $domain); ?></th>
                             <td><?php echo $status['size']; ?></td>
@@ -775,15 +836,15 @@ class SQLiteIntegrationUtils {
                         <tr>
                             <td><?php _e('Compile Options', $domain); ?></td>
                             <td>
-                        <?php
-                        $i = 0;
-                        foreach ($status['options'] as $op) {
-                            if ($i != 0)
-                                echo '<br />';
-                            echo ($i + 1) . '. ' . $op;
-                            $i++;
-                        }
-                        ?>
+            <?php
+            $i = 0;
+            foreach ($status['options'] as $op) {
+                if ($i != 0)
+                    echo '<br />';
+                echo ($i + 1) . '. ' . $op;
+                $i++;
+            }
+            ?>
                             </td>
                         </tr>
                     </tbody>
@@ -791,7 +852,7 @@ class SQLiteIntegrationUtils {
 
                 <h3><?php _e('Database Tables and Indexes', $domain) ?></h3>
                 <p>
-                        <?php _e('Table names in brown are required by WordPress, and those in blue are created by some plugins. The table sqlite_sequence is not a WordPress table but a table required by SQLite to store the current autoincremented value of each table, which is displayed in the parenthesis after the table names. You can\'t manipulate the tables or indexes here. Please use SQLite utilities (e.g. SQLiteManager).', $domain) ?>
+            <?php _e('Table names in brown are required by WordPress, and those in blue are created by some plugins. The table sqlite_sequence is not a WordPress table but a table required by SQLite to store the current autoincremented value of each table, which is displayed in the parenthesis after the table names. You can\'t manipulate the tables or indexes here. Please use SQLite utilities (e.g. SQLiteManager).', $domain) ?>
                 </p>
                 <table class="widefat page fixed" cellspacing="0" id="sqlite-table">
                     <thead>
@@ -822,23 +883,25 @@ class SQLiteIntegrationUtils {
             }
             foreach ($table_info as $tbl_name => $index) :
                 ?>
-                <?php
-                if (in_array($tbl_name, $wpdb->tables('all', true)) || in_array($tbl_name, $network_tables) || $tbl_name == 'sqlite_sequence') {
-                    $which_table = 'system';
-                } else {
-                    $which_table = 'user';
-                }
-                echo '<tr data-table=\'{"tblName":"' . $tbl_name . '","which":"' . $which_table . '"}\'>';
-                if (array_key_exists($tbl_name, $table_seq))
-                    $tbl_name .= " ($table_seq[$tbl_name])";
-                echo '<td class="' . $which_table . '">' . $tbl_name . '</td>';
-                echo '<td class="' . $which_table . '">' . $which_table . ' table</td>';
-                ?>
-                        <td class="<?php echo $which_table ?>"><?php foreach ($index as $idx) {
-                    echo $idx . '<br />';
-                } ?></td>
+                            <?php
+                            if (in_array($tbl_name, $wpdb->tables('all', true)) || in_array($tbl_name, $network_tables) || $tbl_name == 'sqlite_sequence') {
+                                $which_table = 'system';
+                            } else {
+                                $which_table = 'user';
+                            }
+                            echo '<tr data-table=\'{"tblName":"' . $tbl_name . '","which":"' . $which_table . '"}\'>';
+                            if (array_key_exists($tbl_name, $table_seq))
+                                $tbl_name .= " ($table_seq[$tbl_name])";
+                            echo '<td class="' . $which_table . '">' . $tbl_name . '</td>';
+                            echo '<td class="' . $which_table . '">' . $which_table . ' table</td>';
+                            ?>
+                        <td class="<?php echo $which_table ?>"><?php
+                            foreach ($index as $idx) {
+                                echo $idx . '<br />';
+                            }
+                            ?></td>
                         </tr>
-            <?php endforeach; ?>
+                    <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
@@ -866,7 +929,7 @@ class SQLiteIntegrationUtils {
               </p>
               </div>
              */ ?>
-        <?php
+            <?php
         endif;
     }
 
@@ -987,20 +1050,20 @@ JS;
         }
         if (isset($_GET['page']) && $_GET['page'] == 'setting-file') :
             ?>
-                            <?php include_once SQLITE_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
+            <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
 
             <div class="wrap single" id="sqlite-admin-wrap">
                 <h2><?php _e('Database Optimization, Error Log, Init File', $domain) ?></h2>
                 <h3><?php _e('Optimize You Database', $domain) ?></h3>
                 <p>
-                            <?php _e('This button sends &quot;vacuum&quot; command to your SQLite database. That command reclaims space after data has been deleted.', $domain) ?>
+                    <?php _e('This button sends &quot;vacuum&quot; command to your SQLite database. That command reclaims space after data has been deleted.', $domain) ?>
                 </p>
                 <form action="" method="post">
-            <?php
-            if (function_exists('wp_nonce_field')) {
-                wp_nonce_field('sqlitewordpress-db-optimize-stats');
-            }
-            ?>
+                    <?php
+                    if (function_exists('wp_nonce_field')) {
+                        wp_nonce_field('sqlitewordpress-db-optimize-stats');
+                    }
+                    ?>
                     <p>
                         <input type="submit" name="sqlitewordpress_db_optimize" value="<?php _e('Optimize', $domain) ?>" onclick="return confirm('<?php _e('Are you sure to optimize your database?\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" class="button-primary">
                     </p>
@@ -1015,13 +1078,13 @@ JS;
                 <p>
                     <?php _e('If you want to download a file, check the file name and click the Download button. Please check one file at a time.', $domain); ?>
                 </p>
-                    <?php $backup_files = $this->get_backup_files(); ?>
+                <?php $backup_files = $this->get_backup_files(); ?>
                 <form action="" method="post" id="delete-backup-form">
-            <?php
-            if (function_exists('wp_nonce_field')) {
-                wp_nonce_field('sqliteintegration-backup-manip-stats');
-            }
-            ?>
+                    <?php
+                    if (function_exists('wp_nonce_field')) {
+                        wp_nonce_field('sqliteintegration-backup-manip-stats');
+                    }
+                    ?>
                     <table class="widefat page fixed" id="backup-files">
                         <thead>
                             <tr>
@@ -1030,14 +1093,14 @@ JS;
                             </tr>
                         </thead>
                         <tbody>
-                <?php if (!empty($backup_files)) : ?>
-                    <?php foreach ($backup_files as $file) : ?>
+                            <?php if (!empty($backup_files)) : ?>
+                                <?php foreach ($backup_files as $file) : ?>
                                     <tr data-table='{"name":"<?php echo $file; ?>"}'>
                                         <td><input type="checkbox" id="backup_check" name="backup_checked[]" value="<?php echo $file; ?>"/></td>
                                         <td><?php echo $file; ?></td>
                                     </tr>
-                    <?php endforeach; ?>
-            <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                     <p>
@@ -1048,55 +1111,55 @@ JS;
                 </form>
                 <h3><?php _e('SQLite Integration Error Log', $domain); ?></h3>
                 <p>
-            <?php _e('This is the contents of SQLite Integration error log file(default: wp-content/database/debug.txt). If you want to clear this file, click the Clear Log button.', $domain) ?>
+                    <?php _e('This is the contents of SQLite Integration error log file(default: wp-content/database/debug.txt). If you want to clear this file, click the Clear Log button.', $domain) ?>
                 </p>
                 <form action="" method="post">
-            <?php
-            if (function_exists('wp_nonce_field')) {
-                wp_nonce_field('sqlitewordpress-log-reset-stats');
-            }
-            ?>
-            <?php
-            $ret_val = $this->show_error_log();
-            if ($ret_val === false || empty($ret_val)) {
-                $ret_val = __('No error messages are found', $domain);
-            }
-            ?>
+                    <?php
+                    if (function_exists('wp_nonce_field')) {
+                        wp_nonce_field('sqlitewordpress-log-reset-stats');
+                    }
+                    ?>
+                    <?php
+                    $ret_val = $this->show_error_log();
+                    if ($ret_val === false || empty($ret_val)) {
+                        $ret_val = __('No error messages are found', $domain);
+                    }
+                    ?>
                     <textarea name="errorlog" id="errorlog" cols="70" rows="10"><?php echo $ret_val; ?></textarea>
                     <p>
                         <input type="submit" name="sqlitewordpress_log_reset" value="<?php _e('Clear Log', $domain) ?>" onclick="return confirm('<?php _e('Are you sure to clear Log?\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" class="button-primary">
                     </p>
                 </form>
 
-            <?php if (!(defined('DISALLOW_FILE_EDIT') && DISALLOW_FILE_EDIT) || !(defined('DISALLOW_FILE_MODS') && DISALLOW_FILE_MODS)) : ?>
-                <?php echo '<h3>'; ?>
-                <?php _e('Edit Initial File (wp-content/db.php)', $domain) ?>
-                <?php echo '</h3><p>'; ?>
-                <?php _e('When you go &quot;Plugins &raquo; Edit Plugin&quot; page, you can edit plugin source file. But you can\'t see this file there because it is not in the plugin directory. If you need to edit this file, you can edit here. This settings may cause problems. <span class="alert">If you don\'t understand well, please don\'t edit this file</span>.', $domain) ?>
-                <?php echo '</p>'; ?>
-                <?php echo '<form action="" method="post">'; ?>
-                <?php
-                if (function_exists('wp_nonce_field')) {
-                    wp_nonce_field('sqlitewordpress-db-save-stats');
-                }
-                ?>
-                <?php $db_contents = $this->show_db_php(); ?>
-                <?php echo '<textarea name="dbfile" id="dbfile" cols="70" rows="10">' . $db_contents . '</textarea><p>'; ?>
-                <?php printf('<input type="submit" name="sqlitewordpress_db_save" value="%s" onclick="return confirm(\'%s\')" class="button-primary">', __('Save', $domain), __('Are you sure to save this file?\n\nClick [Cancel] to stop, [OK] to continue.', $domain)); ?>
-                <?php echo '</p></form>'; ?>
-            <?php endif; ?>
+                <?php if (!(defined('DISALLOW_FILE_EDIT') && DISALLOW_FILE_EDIT) || !(defined('DISALLOW_FILE_MODS') && DISALLOW_FILE_MODS)) : ?>
+                    <?php echo '<h3>'; ?>
+                    <?php _e('Edit Initial File (wp-content/db.php)', $domain) ?>
+                    <?php echo '</h3><p>'; ?>
+                    <?php _e('When you go &quot;Plugins &raquo; Edit Plugin&quot; page, you can edit plugin source file. But you can\'t see this file there because it is not in the plugin directory. If you need to edit this file, you can edit here. This settings may cause problems. <span class="alert">If you don\'t understand well, please don\'t edit this file</span>.', $domain) ?>
+                    <?php echo '</p>'; ?>
+                    <?php echo '<form action="" method="post">'; ?>
+                    <?php
+                    if (function_exists('wp_nonce_field')) {
+                        wp_nonce_field('sqlitewordpress-db-save-stats');
+                    }
+                    ?>
+                    <?php $db_contents = $this->show_db_php(); ?>
+                    <?php echo '<textarea name="dbfile" id="dbfile" cols="70" rows="10">' . $db_contents . '</textarea><p>'; ?>
+                    <?php printf('<input type="submit" name="sqlitewordpress_db_save" value="%s" onclick="return confirm(\'%s\')" class="button-primary">', __('Save', $domain), __('Are you sure to save this file?\n\nClick [Cancel] to stop, [OK] to continue.', $domain)); ?>
+                    <?php echo '</p></form>'; ?>
+                <?php endif; ?>
                 <h3><?php _e('Update db.php', $domain); ?></h3>
                 <p><?php _e('Replace the old db.php with the new one.', $domain); ?></p>
                 <form action="" method="post">
-            <?php
-            if (function_exists('wp_nonce_field')) {
-                wp_nonce_field('sqliteintegration-db-update-stats');
-            }
-            ?>
+                    <?php
+                    if (function_exists('wp_nonce_field')) {
+                        wp_nonce_field('sqliteintegration-db-update-stats');
+                    }
+                    ?>
                     <p><?php printf('<input type="submit" name="sqliteintegration_update_db_file" value="%s" onclick="return confirm(\'%s\')" class="button-primary">', __('Update', $domain), __('Are you sure to update this file?\n\nClick [Cancel] to stop, [OK] to continue.', $domain)); ?></p>
                 </form>
             </div>
-        <?php
+            <?php
         endif;
     }
 

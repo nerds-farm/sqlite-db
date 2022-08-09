@@ -414,8 +414,8 @@ class SQLiteDbMaintenance {
      */
     private function maintenance_backup() {
         $result = array();
-        $database_file = FQDB;
-        $db_name = basename(FQDB);
+        $database_file = DB_SQLITE;
+        $db_name = basename(DB_SQLITE);
         if (!file_exists($database_file)) {
             return false;
         }
@@ -456,7 +456,7 @@ class SQLiteDbMaintenance {
         }
         if (isset($_GET['page']) && $_GET['page'] == 'maintenance') :
             ?>
-                    <?php include_once SQLITE_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
+            <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
             <div class="wrap" id="sqlite-admin-wrap">
                 <h2><?php _e('Database Maintenace', $domain); ?></h2>
                 <h3><?php _e('Important Notice', $domain); ?></h3>
@@ -465,7 +465,7 @@ class SQLiteDbMaintenance {
                     <?php _e('This page provide you the database sanity check utility and the restore utility.', $domain); ?>
                 </p>
                 <p>
-            <?php _e('Click "Sanity Check" button first, and see if you need to fix database or not. If needed, click "Fix Database" button. Afterward you may go to Miscellaneous page and optimize database (this is not required).', $domain); ?>
+                    <?php _e('Click "Sanity Check" button first, and see if you need to fix database or not. If needed, click "Fix Database" button. Afterward you may go to Miscellaneous page and optimize database (this is not required).', $domain); ?>
                 </p>
                 <p>
                     <?php _e('Fix Database procedure will create a database backup file each time the button clicked. The backup file is named with "maintenance-backup", so you can remove it if you don\'t need it. Please go to Miscellaneous page and check if there is one.', $domain); ?>
@@ -475,41 +475,41 @@ class SQLiteDbMaintenance {
                 </p>
 
                 <form action="" method="post">
-                <?php
-                if (function_exists('wp_nonce_field')) {
-                    wp_nonce_field('sqliteintegration-database-manip-stats');
-                }
-                ?>
+                    <?php
+                    if (function_exists('wp_nonce_field')) {
+                        wp_nonce_field('sqliteintegration-database-manip-stats');
+                    }
+                    ?>
                     <input type="submit" name="sanity-check" class="button-primary" value="<?php _e('Sanity Check', $domain); ?>" onclick="return confirm('<?php _e('Are you sure to check the database? This will take some time.\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" />
                     <input type="submit" name="do-fix-database" class="button-primary" value="<?php _e('Fix database', $domain); ?>" onclick="return confirm('<?php _e('Are you sure to do fix the database? This will take some time.\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" />
                 </form>
 
-                    <?php if (defined('WP_DEBUG') && WP_DEBUG == true) : ?>
+                <?php if (defined('WP_DEBUG') && WP_DEBUG == true) : ?>
                     <h3><?php _e('Columns Information', $domain); ?></h3>
                     <p>
                         <?php _e('Select a table name and click "Display Columns" button, and you\'ll see the column property of that table. This information is for debug use.', $domain); ?>
                     </p>
-                        <?php
-                        $wp_tables = $wpdb->tables('all');
-                        ?>
+                    <?php
+                    $wp_tables = $wpdb->tables('all');
+                    ?>
                     <form action="" method="post">
-                            <?php
-                            if (function_exists('wp_nonce_field')) {
-                                wp_nonce_field('sqliteintegration-database-manip-stats');
-                            }
-                            ?>
+                        <?php
+                        if (function_exists('wp_nonce_field')) {
+                            wp_nonce_field('sqliteintegration-database-manip-stats');
+                        }
+                        ?>
                         <label for="table"/><?php _e('Table Name: ', $domain); ?></label>
                         <select name="table" id="table">
-                <?php foreach ($wp_tables as $table) : ?>
+                            <?php foreach ($wp_tables as $table) : ?>
                                 <option value="<?php echo $table; ?>"><?php echo $table; ?></option>
-                <?php endforeach; ?>
+                            <?php endforeach; ?>
                         </select>
                         <input type="submit" name="show-columns" class="button-secondary" value="<?php _e('Display Columns', $domain); ?>" onclick="return confirm('<?php _e('Display columns in the selected table.\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" />
                     </form>
-            <?php endif; ?>
+                <?php endif; ?>
 
             </div>
-        <?php
+            <?php
         endif;
 
         if (isset($_POST['do-fix-database'])) {

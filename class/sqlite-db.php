@@ -17,6 +17,7 @@ class SQLiteDb {
      * @param no parameter is provided.
      */
     public function __construct() {
+
         if (function_exists('register_activation_hook')) {
             register_activation_hook(__FILE__, array($this, 'install'));
         }
@@ -35,6 +36,7 @@ class SQLiteDb {
         }
         // See the docstring for download_backup_db() in utilities/utility.php
         // We need this registration process.
+        add_action('admin_init', array($this, 'exec_actions'));
         add_action('admin_init', array('SQLiteIntegrationUtils', 'download_backup_db'));
         add_action('plugins_loaded', array($this, 'textdomain_init'));
     }
@@ -123,7 +125,7 @@ class SQLiteDb {
     public function add_pages() {
         global $utils, $doc, $patch_utils, $maintenance;
         if (function_exists('add_options_page')) {
-            $welcome_page = add_options_page(__('SQLite Integration'), __('SQLite DB'), 'manage_options', 'sqlite-integration', array($utils, 'welcome'));
+            $welcome_page = add_options_page(__('SQLite Integration'), __('SQLite DB'), 'manage_options', 'sqlite-db', array($utils, 'welcome'));
             $util_page = add_submenu_page(null, 'System Info', 'System Info', 'manage_options', 'sys-info', array($utils, 'show_utils'));
             $edit_db = add_submenu_page(null, 'Setting File', 'Setting File', 'manage_options', 'setting-file', array($utils, 'edit_db_file'));
             $doc_page = add_submenu_page(null, 'Documentation', 'Documentation', 'manage_options', 'doc', array($doc, 'show_doc'));
@@ -144,7 +146,7 @@ class SQLiteDb {
     public function add_network_pages() {
         global $utils, $doc, $patch_utils, $maintenance;
         if (function_exists('add_options_page')) {
-            $welcome_page = add_submenu_page('settings.php', __('SQLite Integration'), __('SQLite Integration'), 'manage_network_options', 'sqlite-integration', array($utils, 'welcome'));
+            $welcome_page = add_submenu_page('settings.php', __('SQLite Integration'), __('SQLite Integration'), 'manage_network_options', 'sqlite-db', array($utils, 'welcome'));
             $util_page = add_submenu_page(null, 'System Info', 'System Info', 'manage_network_options', 'sys-info', array($utils, 'show_utils'));
             $edit_db = add_submenu_page(null, 'Setting File', 'Setting File', 'manage_network_options', 'setting-file', array($utils, 'edit_db_file'));
             $doc_page = add_submenu_page(null, 'Documentation', 'Documentation', 'manage_network_options', 'doc', array($doc, 'show_doc'));
@@ -152,11 +154,11 @@ class SQLiteDb {
             $maintenance_page = add_submenu_page(null, 'DB Maintenance', 'DB Maintenance', 'manage_network_options', 'maintenance', array($maintenance, 'show_maintenance_page'));
             $explorer_page = add_submenu_page(null, 'DB Explorer', 'DB Explorer', 'manage_options', 'explorer', array($this, 'show_explorer_page'));
             /*
-            add_action('admin_print_scripts-' . $util_page, array($this, 'add_sqlite_script'));
-            add_action('admin_print_scripts-' . $doc_page, array($this, 'add_sqlite_script'));
-            add_action('admin_print_scripts-' . $patch_page, array($this, 'add_sqlite_script'));
-            add_action('admin_print_scripts-' . $edit_db, array($this, 'add_sqlite_script'));
-          
+              add_action('admin_print_scripts-' . $util_page, array($this, 'add_sqlite_script'));
+              add_action('admin_print_scripts-' . $doc_page, array($this, 'add_sqlite_script'));
+              add_action('admin_print_scripts-' . $patch_page, array($this, 'add_sqlite_script'));
+              add_action('admin_print_scripts-' . $edit_db, array($this, 'add_sqlite_script'));
+
               add_action('admin_print_styles-'.$welcome_page, array($this, 'add_style_sheet'));
               add_action('admin_print_styles-'.$util_page, array($this, 'add_style_sheet'));
               add_action('admin_print_styles-'.$edit_db, array($this, 'add_style_sheet'));
@@ -182,7 +184,7 @@ class SQLiteDb {
         //  $moFile = dirname(__FILE__) . "/languages/sqlite-wordpress-" . $current_locale . ".mo";
         //  if(@file_exists($moFile) && is_readable($moFile)) load_textdomain('sqlite-wordpress', $moFile);
         //}
-        load_plugin_textdomain($utils->text_domain, false, SQLITE_DIR . '/languages/');
+        load_plugin_textdomain($utils->text_domain, false, SQLITE_DB_DIR . DIRECTORY_SEPARATOR. 'languages'. DIRECTORY_SEPARATOR);
     }
 
     /**
@@ -204,8 +206,8 @@ class SQLiteDb {
         } else {
             $stylesheet_file = $admin_color . '.min.css';
         }
-        $style_url = SQLITE_URL . '/styles/' . $stylesheet_file;
-        $style_file = SQLITE_PATH . '/styles/' . $stylesheet_file;
+        $style_url = SQLITE_DB_URL . '/styles/' . $stylesheet_file;
+        $style_file = SQLITE_DB_PATH . '/styles/' . $stylesheet_file;
         if (file_exists($style_file)) {
             wp_enqueue_style('sqlite_integration_stylesheet', $style_url);
         }
@@ -221,18 +223,133 @@ class SQLiteDb {
      * @return no return value.
      */
     public function add_sqlite_script() {
-        $script_url = SQLITE_URL . '/js/sqlite.min.js';
-        $script_file = SQLITE_PATH . '/js/sqlite.min.js';
+        $script_url = SQLITE_DB_URL . '/js/sqlite.min.js';
+        $script_file = SQLITE_DB_PATH . '/js/sqlite.min.js';
         if (file_exists($script_file)) {
             wp_enqueue_script('sqlite-integration', $script_url, 'jquery');
         }
     }
-    
+
     public function show_explorer_page() {
-        $explorer_file = SQLITE_PATH . DIRECTORY_SEPARATOR.'utilities'. DIRECTORY_SEPARATOR.'explorer.php';
+        $explorer_file = SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'utilities' . DIRECTORY_SEPARATOR . 'explorer.php';
         if (file_exists($explorer_file)) {
             include_once($explorer_file);
         }
+    }
+
+    public function exec_actions() {
+        if (!empty($_GET['page']) && $_GET['page'] == 'sqlite-db') {
+            if (!empty($_GET['action'])) {
+
+                switch ($_GET['action']) {
+                    case 'convert':
+                        include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'class' . DIRECTORY_SEPARATOR . 'mysql2sqlite.php';
+                        $db_mysql = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . DB_NAME . '.sqlite';
+                        if (file_exists($db_mysql)) {
+                            rename($db_mysql, WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . DB_NAME . '_'.time().'.sqlite');
+                        }
+                        $args = ['sqlitedb' => $db_mysql];
+                        $converter = new \Mysql2Sqlite($args);
+                        $converter->run();
+                        break;
+                    case 'set':
+                        if (!empty($_GET['db_sqlite'])) {
+                            $db_sqlite = str_replace('\\\\', '\\', $_GET['db_sqlite']);
+                            $this->wp_update_global_config('DB_SQLITE', $db_sqlite);
+                        }
+                        break;
+                    case 'switch':
+                        $db_file = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'db.php';
+                        if (file_exists($db_file)) {
+                            if (defined('DB_PDO') && DB_PDO == 'sqlite') {
+                                $this->wp_update_global_config('DB_PDO', 'mysql');
+                            } else {
+                                $this->wp_update_global_config('DB_PDO', 'sqlite');
+                            }
+                            // check if its own db.php file (find DP_PDO constant)
+                            // otherwise append require_once db.php
+                        } else {
+                            copy(SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'db.php', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'db.php');
+                        }
+                        break;
+                }
+
+                /*
+                  // dump
+                  include_once SQLITE_DB_PATH.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php';
+                  try {
+                  $dump = new \Ifsnop\Mysqldump\Mysqldump('mysql:host='.DB_HOST.';dbname='.DB_NAME, DB_USER, DB_PASSWORD);
+                  $dump->start(WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database'. DIRECTORY_SEPARATOR.DB_NAME.'.sql');
+                  } catch (\Exception $e) {
+                  echo 'mysqldump-php error: ' . $e->getMessage();
+                  }
+                 */
+
+                // switch USE_MYSQL value in config.php
+                wp_redirect(admin_url('options-general.php?page=sqlite-db'));
+            }
+        }
+    }
+
+    function wp_update_global_config($key, $value) {
+
+        if (file_exists(ABSPATH . 'wp-config.php')) {
+            $global_config_file = ABSPATH . 'wp-config.php';
+        } else {
+            $global_config_file = dirname(ABSPATH) . '/wp-config.php';
+        }
+
+        $half = "define( '" . $key . "',";
+        $line = $half . " '" . $value . "' );";
+        if ($this->is_writeable_ACLSafe($global_config_file)) {
+            //read the entire string
+            $str = file_get_contents($global_config_file);
+
+            if (strpos($str, $half) !== false) {
+                // update
+                $str = str_replace($half . " '" . constant($key) . "' );", $line, $str);
+            } else {
+                // add
+                $db_name = "define( 'DB_NAME',";
+                $str = str_replace($db_name, $line . PHP_EOL . $db_name, $str);
+            }
+
+            //write the entire string
+            file_put_contents($global_config_file, $str);
+        }
+        return true;
+    }
+
+    // from legolas558 d0t users dot sf dot net at http://www.php.net/is_writable
+    function is_writeable_ACLSafe($path) {
+
+        if (
+                ( defined('PHP_OS_FAMILY') && 'Windows' !== constant('PHP_OS_FAMILY') ) ||
+                stristr(PHP_OS, 'DAR') ||
+                !stristr(PHP_OS, 'WIN')
+        ) {
+            return is_writeable($path);
+        }
+
+        // PHP's is_writable does not work with Win32 NTFS
+
+        if ($path[strlen($path) - 1] == '/') { // recursively return a temporary file path
+            return $this->is_writeable_ACLSafe($path . uniqid(mt_rand()) . '.tmp');
+        } elseif (is_dir($path)) {
+            return $this->is_writeable_ACLSafe($path . '/' . uniqid(mt_rand()) . '.tmp');
+        }
+
+        // check tmp file for read/write capabilities
+        $rm = file_exists($path);
+        $f = @fopen($path, 'a');
+        if ($f === false)
+            return false;
+        fclose($f);
+        if (!$rm) {
+            unlink($path);
+        }
+
+        return true;
     }
 
 }

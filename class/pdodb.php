@@ -11,8 +11,8 @@ if (!defined('ABSPATH')) {
 	echo 'Thank you, but you are not allowed to accesss this file.';
 	die();
 }
-require_once PDODIR . 'pdoengine.class.php';
-//require_once PDODIR . 'install.php';
+require_once SQLITE_DB_PATH . 'class'.DIRECTORY_SEPARATOR.'pdoengine.php';
+//require_once SQLITE_DB_PATH . 'install.php';
 
 if (!defined('SAVEQUERIES')){
 	define ('SAVEQUERIES', false);
