@@ -1,0 +1,125 @@
+.left_td.collapsed #leftNav{
+    display: none;
+}
+fieldset label{
+    min-width:200px;
+    display:block;
+    float:left
+}
+fieldset{
+    padding:15px;
+    border-width:1px;
+    border-style:solid;
+    border-radius:5px;
+    -moz-border-radius:5px;
+    background-color:#f9f9f9
+}
+.databaseList select{
+    max-width:200px
+}
+
+.confirm{
+    border-color:#03F;
+    border-width:1px;
+    border-style:dashed;
+    padding:15px;
+    background-color:#e0ebf6
+}
+.tab{
+    display:block;
+    padding:5px;
+    padding-right:8px;
+    padding-left:8px;
+    border-color:#999;
+    border-width:1px;
+    border-style:solid;
+    margin-right:5px;
+    float:left;
+    border-bottom-style:none;
+    position:relative;
+    top:1px;
+    padding-bottom:4px;
+    background-color:#eaeaea;
+    border-top-left-radius:5px;
+    border-top-right-radius:5px;
+    -moz-border-radius-topleft:5px;
+    -moz-border-radius-topright:5px
+}
+.tab_pressed{
+    display:block;
+    padding:5px;
+    padding-right:8px;
+    padding-left:8px;
+    border-color:#666;
+    border-width:1px;
+    border-style:solid;
+    margin-right:5px;
+    float:left;
+    border-bottom-style:none;
+    position:relative;
+    top:1px;
+    background-color:#FFF;
+    cursor:default;
+    border-top-left-radius:5px;
+    border-top-right-radius:5px;
+    -moz-border-radius-topleft:5px;
+    -moz-border-radius-topright:5px
+}
+.helpq{
+    font-size:11px;
+    font-weight:normal
+}
+#help_container{
+    padding:0px;
+    font-size:12px;
+    margin-left:auto;
+    margin-right:auto;
+    background-color:#fff
+}
+.help_outer{
+    background-color:#FFF;
+    padding:0px;
+    height:300px;
+    position:relative
+}
+.help_list{
+    padding:10px;
+    height:auto
+}
+.headd{
+    font-size:14px;
+    font-weight:bold;
+    display:block;
+    padding:10px;
+    background-color:#e0ebf6;
+    border-color:#03F;
+    border-width:1px;
+    border-style:solid;
+    border-left-style:none;
+    border-right-style:none
+}
+.help_inner{
+    padding:10px
+}
+.help_top{
+    display:block;
+    position:absolute;
+    right:10px;
+    bottom:10px
+}
+.warning,.delete,.empty,.drop,.delete_db{
+    color:red
+}
+.sidebar_table{
+    font-size:11px
+}
+.active_table,.active_db{
+    text-decoration:underline
+}
+.null{
+    color:#888
+}
+.found{
+    background:#FF0;
+    text-decoration:none
+}

@@ -47,7 +47,7 @@ define('SQLITE_DB_DIR', dirname(plugin_basename(__FILE__)));
 if (!defined('SQLITE_DB_PATH')) {
     define('SQLITE_DB_PATH', dirname(__FILE__). DIRECTORY_SEPARATOR);
 }
-define('SQLITE_DB_URL', WP_PLUGIN_URL . DIRECTORY_SEPARATOR . SQLITE_DB_DIR);
+define('SQLITE_DB_URL', WP_PLUGIN_URL . '/' . SQLITE_DB_DIR . '/');
 
 if (!defined('DB_PDO')) {
     define( 'DB_PDO', 'mysql' );

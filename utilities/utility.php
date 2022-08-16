@@ -632,56 +632,100 @@ class SQLiteIntegrationUtils {
                     <?php _e('Thank you for using SQLite Integration plugin!', $domain) ?>
                 </p>
 
-                <a href="?page=sqlite-db&action=clone" class="button">1. Clone current MySQL to SQLite</a>
-                <br><br>
-                <?php 
-                $tmp = DB_PATH.'*.sqlite';
-                //var_dump($tmp);
-                $dbs = array_merge(glob(DB_PATH.'.*.sqlite'), glob($tmp));//glob($tmp);
-                if (!empty($dbs)) { ?>
-                <form action="?" method="GET">
-                    <input type="hidden" name="page" value="sqlite-db" />
-                    <input type="hidden" name="action" value="set" />
-                    <input type="submit" value="2. Set SQLite DB File" class="button">
-                    <select name="db_sqlite">
-                        <?php
-                            
-                            foreach ($dbs as $sdb) { 
-                                $sdb = str_replace('/', DIRECTORY_SEPARATOR, $sdb);
-                                $selected = (defined('DB_SQLITE') && DB_SQLITE == $sdb) ? ' selected' : '';
-                                ?>
-                                <option value="<?php echo $sdb; ?>"<?php echo $selected; ?>><?php echo $sdb; ?></option>
-                            <?php }
+
+                <div class="card">
+                    <a href="?page=sqlite-db&action=clone" class="button">1. Clone current MySQL to SQLite</a>
+                    <br><br>
+                    <?php
+                    $tmp = DB_PATH . '*.sqlite';
+                    //var_dump($tmp);
+                    $dbs = array_merge(glob(DB_PATH . '.*.sqlite'), glob($tmp)); //glob($tmp);
+                    if (!empty($dbs)) {
                         ?>
-                    </select>
-                    
-                </form>
-                
-                <?php if (defined('DB_SQLITE')) { ?>
-                <br>
-                <?php if (defined('DB_PDO') && DB_PDO == 'sqlite') { ?>
-                    <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning"><?php _e('Revert to MySQL DB'); ?></a>
-                <?php } else { ?>
-                    <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning">3. <?php _e('Switch to SQLite DB'); ?></a>
-                <?php
+                        <form action="?" method="GET">
+                            <input type="hidden" name="page" value="sqlite-db" />
+                            <input type="hidden" name="action" value="set" />
+                            <input type="submit" value="2. Set SQLite DB File" class="button">
+                            <select name="db_sqlite">
+                                <?php
+                                foreach ($dbs as $sdb) {
+                                    $sdb = str_replace('/', DIRECTORY_SEPARATOR, $sdb);
+                                    $selected = (defined('DB_SQLITE') && DB_SQLITE == $sdb) ? ' selected' : '';
+                                    ?>
+                                    <option value="<?php echo $sdb; ?>"<?php echo $selected; ?>><?php echo $sdb; ?></option>
+                                <?php }
+                                ?>
+                            </select>
+
+                        </form>
+
+                        <?php if (defined('DB_SQLITE')) { ?>
+                            <br>
+                            <?php if (defined('DB_PDO') && DB_PDO == 'sqlite') { ?>
+                                <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning"><?php _e('Revert to MySQL DB'); ?></a>
+                            <?php } else { ?>
+                                <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning">3. <?php _e('Switch to SQLite DB'); ?></a>
+                                <?php
+                            }
+                        }
                     }
-                } 
-                } ?>
-                
-                <br>
+                    ?>
+                </div>
+
                 <br>
                 <hr>
-                
-                    
-                    
                 <?php
+                switch (DB_PDO) {
+                    case 'sqlite':
+                        $this->sqlite_info();
+                        break;
+                    case 'mysql':
+                    default:
+                        $this->mysql_info();
+                        break;
+                }
+
+                if (!empty($web_server)) {
+                    ?>
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <?php _e('Web server'); ?>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                <?php if (!empty($web_server)) { ?>
+                                {% if web_server.software is not null %}
+                                <li class="list-group-item">
+                                    {{ web_server.software }}
+                                </li>
+                                {% endif %}
+                                <li class="list-group-item" id="li_mysql_client_version">
+                    <?php _e('Database client version'); ?>:
+                                    {{ web_server.database }}
+                                </li>
+                                <li class="list-group-item">
+                    <?php _e('PHP extension'); ?>:
+                                    {% for extension in web_server.php_extensions %}
+                                    {{ extension }}
+                                    {{ show_php_docu('book.' ~ extension ~ '.php') }}
+                                    {% endfor %}
+                                </li>
+                                <li class="list-group-item">
+                                <?php _e('PHP version'); ?>:
+                                    {{ web_server.php_version }}
+                                </li>
+                    <?php } ?>
+                        </ul>
+                    </div>
+                <?php
+                }
+
                 if (defined('SQLITE_DB_PATH')) {
                     ?>
                     <p>
                         <?php _e('You read this message, which means you have succeeded in installing WordPress with this plugin SQLite Integration. Congratulations and enjoy your Blogging!', $domain) ?>
                     </p>
                     <p>
-                        <?php _e('You don\'t have to set any special settings. In fact there are no other settings. You can write articles or pages and customize you WordPress in an ordinary way. You want to install your plugins? All right, go ahead. But some of them may be incompatible with this. Please read more information about this plugin and your SQLite database below.', $domain) ?>
+                <?php _e('You don\'t have to set any special settings. In fact there are no other settings. You can write articles or pages and customize you WordPress in an ordinary way. You want to install your plugins? All right, go ahead. But some of them may be incompatible with this. Please read more information about this plugin and your SQLite database below.', $domain) ?>
                     </p>
                     <p><?php _e('Deactivation makes this documents and utilities disappear from the dashboard, but it doesn\'t affect the functionality of the SQLite Integration. when uninstalled, it will remove wp-content/uploads/patches directory (if exists) and wp-content/db.php file altogether.', $domain); ?></p>
                     <table class="widefat" cellspacing="0" id="menu">
@@ -722,7 +766,7 @@ class SQLiteIntegrationUtils {
                 // Import from MySQL
                 ?>
                 <h3>
-                    <?php _e('Import and Switch to SQLITE DB!', $domain) ?>
+                <?php _e('Import and Switch to SQLITE DB!', $domain) ?>
                 </h3>
                 <a href="?page=sqlite-db&action=import">Import</a>
 
@@ -745,7 +789,7 @@ class SQLiteIntegrationUtils {
         }
         if (isset($_GET['page']) && $_GET['page'] == 'sys-info') :
             ?>
-            <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
+                <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
             <div class="wrap" id="sqlite-admin-wrap">
                 <h2><?php _e('System Information', $domain) ?></h2>
                 <h3><?php _e('PHP Informations', $domain) ?></h3>
@@ -822,29 +866,29 @@ class SQLiteIntegrationUtils {
                         <tr>
                             <td><?php _e('Collations', $domain); ?></th>
                             <td>
-            <?php
-            $i = 0;
-            foreach ($status['collations'] as $col) {
-                if ($i != 0)
-                    echo '<br />';
-                echo ($i + 1) . '. ' . $col;
-                $i++;
-            }
-            ?>
+                                <?php
+                                $i = 0;
+                                foreach ($status['collations'] as $col) {
+                                    if ($i != 0)
+                                        echo '<br />';
+                                    echo ($i + 1) . '. ' . $col;
+                                    $i++;
+                                }
+                                ?>
                             </td>
                         </tr>
                         <tr>
                             <td><?php _e('Compile Options', $domain); ?></td>
                             <td>
-            <?php
-            $i = 0;
-            foreach ($status['options'] as $op) {
-                if ($i != 0)
-                    echo '<br />';
-                echo ($i + 1) . '. ' . $op;
-                $i++;
-            }
-            ?>
+                                <?php
+                                $i = 0;
+                                foreach ($status['options'] as $op) {
+                                    if ($i != 0)
+                                        echo '<br />';
+                                    echo ($i + 1) . '. ' . $op;
+                                    $i++;
+                                }
+                                ?>
                             </td>
                         </tr>
                     </tbody>
@@ -863,26 +907,26 @@ class SQLiteIntegrationUtils {
                         </tr>
                     </thead>
                     <tbody>
-            <?php
-            global $wpdb;
-            $table_info = $this->get_tables_info();
-            $table_seq = $this->get_sequence();
-            $network_tables = array();
-            if (is_multisite()) {
-                $tmp_tables = $wpdb->tables('blog', false);
-                $blogs = $wpdb->get_col("SELECT * FROM {$wpdb->prefix}blogs");
-                if (count($blogs) > 1) {
-                    foreach ($blogs as $id) {
-                        if ($id == 1)
-                            continue;
-                        foreach ($tmp_tables as $tmp_tbl) {
-                            $network_tables[] = $wpdb->prefix . $id . '_' . $tmp_tbl;
+                        <?php
+                        global $wpdb;
+                        $table_info = $this->get_tables_info();
+                        $table_seq = $this->get_sequence();
+                        $network_tables = array();
+                        if (is_multisite()) {
+                            $tmp_tables = $wpdb->tables('blog', false);
+                            $blogs = $wpdb->get_col("SELECT * FROM {$wpdb->prefix}blogs");
+                            if (count($blogs) > 1) {
+                                foreach ($blogs as $id) {
+                                    if ($id == 1)
+                                        continue;
+                                    foreach ($tmp_tables as $tmp_tbl) {
+                                        $network_tables[] = $wpdb->prefix . $id . '_' . $tmp_tbl;
+                                    }
+                                }
+                            }
                         }
-                    }
-                }
-            }
-            foreach ($table_info as $tbl_name => $index) :
-                ?>
+                        foreach ($table_info as $tbl_name => $index) :
+                            ?>
                             <?php
                             if (in_array($tbl_name, $wpdb->tables('all', true)) || in_array($tbl_name, $network_tables) || $tbl_name == 'sqlite_sequence') {
                                 $which_table = 'system';
@@ -901,7 +945,7 @@ class SQLiteIntegrationUtils {
                             }
                             ?></td>
                         </tr>
-                    <?php endforeach; ?>
+            <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
@@ -1048,7 +1092,7 @@ JS;
                 echo '<div id="message" class="updated fade">' . $message . '</div>';
             }
         }
-        if (isset($_GET['page']) && $_GET['page'] == 'setting-file') :
+        if (isset($_GET['page']) && $_GET['page'] == 'setting-file') {
             ?>
             <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
 
@@ -1078,7 +1122,7 @@ JS;
                 <p>
                     <?php _e('If you want to download a file, check the file name and click the Download button. Please check one file at a time.', $domain); ?>
                 </p>
-                <?php $backup_files = $this->get_backup_files(); ?>
+                    <?php $backup_files = $this->get_backup_files(); ?>
                 <form action="" method="post" id="delete-backup-form">
                     <?php
                     if (function_exists('wp_nonce_field')) {
@@ -1093,14 +1137,14 @@ JS;
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (!empty($backup_files)) : ?>
-                                <?php foreach ($backup_files as $file) : ?>
+            <?php if (!empty($backup_files)) : ?>
+                <?php foreach ($backup_files as $file) : ?>
                                     <tr data-table='{"name":"<?php echo $file; ?>"}'>
                                         <td><input type="checkbox" id="backup_check" name="backup_checked[]" value="<?php echo $file; ?>"/></td>
                                         <td><?php echo $file; ?></td>
                                     </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
                         </tbody>
                     </table>
                     <p>
@@ -1145,9 +1189,9 @@ JS;
                     ?>
                     <?php $db_contents = $this->show_db_php(); ?>
                     <?php echo '<textarea name="dbfile" id="dbfile" cols="70" rows="10">' . $db_contents . '</textarea><p>'; ?>
-                    <?php printf('<input type="submit" name="sqlitewordpress_db_save" value="%s" onclick="return confirm(\'%s\')" class="button-primary">', __('Save', $domain), __('Are you sure to save this file?\n\nClick [Cancel] to stop, [OK] to continue.', $domain)); ?>
-                    <?php echo '</p></form>'; ?>
-                <?php endif; ?>
+                <?php printf('<input type="submit" name="sqlitewordpress_db_save" value="%s" onclick="return confirm(\'%s\')" class="button-primary">', __('Save', $domain), __('Are you sure to save this file?\n\nClick [Cancel] to stop, [OK] to continue.', $domain)); ?>
+                <?php echo '</p></form>'; ?>
+                    <?php endif; ?>
                 <h3><?php _e('Update db.php', $domain); ?></h3>
                 <p><?php _e('Replace the old db.php with the new one.', $domain); ?></p>
                 <form action="" method="post">
@@ -1160,7 +1204,89 @@ JS;
                 </form>
             </div>
             <?php
-        endif;
+        }
+    }
+
+    public function sqlite_info() {
+        global $lang;
+        $lang = [
+            'date_format' => get_option('date_format'),
+        ];
+        $args = [
+            'path' => DB_SQLITE,
+            'name' => DB_NAME,
+        ];
+        define("FORCETYPE", false);
+        $path = SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'phpliteadmin' . DIRECTORY_SEPARATOR;
+        include_once $path . 'database.php';
+        $db = new \PhpLiteAdmin\Database($args);
+        if (!empty($db)) {
+        ?>
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3><?php _e('Database server'); ?></h3>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <b><?php _e('Driver'); ?>:</b> <?php echo $db->getType() ?>
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Name'); ?>:</b> <?php echo $db->getName(); ?>
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Path'); ?>:</b> <?php echo $db->getPath(); ?>
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Size'); ?>:</b> <?php echo number_format($db->getSize()); ?> KiB
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Last Update Date'); ?>:</b> <?php echo $db->getDate(); ?>
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('SQLite Version'); ?>:</b> <?php echo $db->getSQLiteVersion(); ?>
+                </li>
+   
+            </ul>
+        </div>
+        <?php
+        }
+    }
+
+    public function mysql_info() {
+        global $wpdb;
+        ?>
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3><?php _e('Database server'); ?></h3>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <b><?php _e('Server'); ?>:</b> <?php echo DB_HOST; ?>
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Server type'); ?>:</b> {{ database_server.type }}
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Server connection'); ?>:</b> {{ database_server.connection|raw }}
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Server version'); ?>:</b> {{ database_server.version }}
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Protocol version'); ?>:</b> {{ database_server.protocol }}
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('User'); ?>:</b> {{ database_server.user }}
+                </li>
+                <li class="list-group-item">
+                    <b><?php _e('Server charset'); ?>:</b> 
+                    <span lang="en" dir="ltr">
+                        {{ database_server.charset }}
+                    </span>
+                </li>
+            </ul>
+        </div>
+        <?php
     }
 
 }
