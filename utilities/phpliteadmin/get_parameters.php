@@ -54,6 +54,10 @@ class GetParameters {
         if ($csrf && $method == 'post')
             $hidden .= '<input type="hidden" name="token" value="' . $_SESSION[COOKIENAME . 'token'] . '" />';
 
+        if (!empty($_GET['page'])) {
+            $hidden .= '<input type="hidden" name="page" value="'.$_GET['page'].'" />';
+        }
+        
         return "<form action='" . $url . "' method='" . $method . "'" .
                 ($name != '' ? " name='" . $name . "'" : '') .
                 ($upload ? " enctype='multipart/form-data'" : '') . ">" .

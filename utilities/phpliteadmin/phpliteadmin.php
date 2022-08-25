@@ -493,24 +493,6 @@ $sqlite_datatypes = array("INTEGER", "REAL", "TEXT", "BLOB", "NUMERIC", "BOOLEAN
 //available SQLite functions array (don't add anything here or there will be problems)
 $sqlite_functions = array("abs", "hex", "length", "lower", "ltrim", "random", "round", "rtrim", "trim", "typeof", "upper");
 
-//- Support functions
-// for php < 5.6.0
-if (!function_exists('hash_equals')) {
-
-    function hash_equals($str1, $str2) {
-        if (strlen($str1) != strlen($str2))
-            return false;
-        else {
-            $res = $str1 ^ $str2;
-            $ret = 0;
-            for ($i = strlen($res) - 1; $i >= 0; $i--)
-                $ret |= ord($res[$i]);
-            return !$ret;
-        }
-    }
-
-}
-
 //function that allows SQL delimiter to be ignored inside comments or strings
 function explode_sql($delimiter, $sql) {
     $ign = array('"' => '"', "'" => "'", "/*" => "*/", "--" => "\n"); // Ignore sequences.
@@ -816,18 +798,27 @@ if ($auth->isAuthorized()) {
         sort($databases);
     }
     // we now have the $databases array set. Check whether selected DB is a managed Db (is in this array)
-    if (!isset($currentDB) && (isset($_GET['database']) || isset($_POST['database']) )) {
-        $selected_db = ( isset($_POST['database']) ? $_POST['database'] : $_GET['database'] );
-        $selected_db = str_replace('\\\\', '\\', $selected_db);
-        //var_dump($selected_db); die();
-        $db_key = isManagedDB($selected_db);
-
-        if ($db_key !== false) {
-            $currentDB = $databases[$db_key];
-            $params->database = $databases[$db_key]['path'];
+    if (!isset($currentDB)) {
+        $selected_db = false;
+        if (isset($_GET['database']) || isset($_POST['database'])) {
+            $selected_db = ( isset($_POST['database']) ? $_POST['database'] : $_GET['database'] );
+            $selected_db = str_replace('\\\\', '\\', $selected_db);
+            //var_dump($selected_db); die();
+            
+        } else {
+            if (defined('DB_SQLITE')) {
+                $selected_db = DB_SQLITE;
+            }
+        }
+        if ($selected_db) {
+            $db_key = isManagedDB($selected_db);
+            if ($db_key !== false) {
+                $currentDB = $databases[$db_key];
+                $params->database = $databases[$db_key]['path'];
+            }
         }
     }
-
+    
     //- Delete an existing database
     if (isset($_GET['database_delete'])) {
         $dbpath = $_POST['database_delete'];
@@ -1862,7 +1853,7 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
             echo "<b>" . $lang['db_size'] . "</b>: " . number_format($db->getSize()) . " KiB<br/>";
             echo "<b>" . $lang['db_mod'] . "</b>: " . $db->getDate() . "<br/>";
             echo "<b>" . $lang['sqlite_v'] . "</b>: " . $db->getSQLiteVersion() . "<br/>";
-            echo "<b>" . $lang['sqlite_ext'] . "</b> " . helpLink($lang['help1']) . ": " . $db->getType() . "<br/>";
+            echo "<b>" . $lang['sqlite_ext'] . "</b>: " . $db->getType() . "<br/>";
             echo "<b>" . $lang['php_v'] . "</b>: " . phpversion() . "<br/>";
             echo "<b>" . PROJECT . " " . $lang["ver"] . "</b>: " . VERSION;
             echo " <a href='" . PROJECT_URL . "' target='_blank' id='oldVersion' style='display: none;' class='warning'>" . $lang['new_version'] . "</a><br/><br/>";

@@ -448,11 +448,11 @@ class Database {
             return array();
         if ($this->type == "PDO") {
             if ($mode == "assoc")
-                $mode = PDO::FETCH_ASSOC;
+                $mode = \PDO::FETCH_ASSOC;
             else if ($mode == "num")
-                $mode = PDO::FETCH_NUM;
+                $mode = \PDO::FETCH_NUM;
             else
-                $mode = PDO::FETCH_BOTH;
+                $mode = \PDO::FETCH_BOTH;
             return $result->fetch($mode);
         } else if ($this->type == "SQLite3") {
             if ($mode == "assoc")

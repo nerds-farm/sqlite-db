@@ -84,12 +84,15 @@ if (!extension_loaded('pdo_sqlite')) {
  */
 if (!defined('SQLITE_DB_PATH')) {
     if (defined('WP_PLUGIN_DIR')) {
-        define('SQLITE_DB_PATH', WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
+        $WP_PLUGIN_DIR = str_replace('/', DIRECTORY_SEPARATOR, WP_PLUGIN_DIR);
+        define('SQLITE_DB_PATH', $WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
     } else {
         if (defined('WP_CONTENT_DIR')) {
-            define('SQLITE_DB_PATH', WP_CONTENT_DIR  . DIRECTORY_SEPARATOR . 'plugins'.DIRECTORY_SEPARATOR.'sqlite-db'.DIRECTORY_SEPARATOR);
+            $WP_CONTENT_DIR = str_replace('/', DIRECTORY_SEPARATOR, WP_CONTENT_DIR);
+            define('SQLITE_DB_PATH', $WP_CONTENT_DIR  . DIRECTORY_SEPARATOR . 'plugins'.DIRECTORY_SEPARATOR.'sqlite-db'.DIRECTORY_SEPARATOR);
         } else {
-            define('SQLITE_DB_PATH', ABSPATH . 'wp-content'.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'sqlite-db'.DIRECTORY_SEPARATOR);
+            $ABSPATH = str_replace('/', DIRECTORY_SEPARATOR, ABSPATH);
+            define('SQLITE_DB_PATH', $ABSPATH . 'wp-content'.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'sqlite-db'.DIRECTORY_SEPARATOR);
         }
     }
 }

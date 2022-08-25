@@ -259,8 +259,18 @@ class SQLiteDb {
                         }
                         break;
                     case 'switch':
-                        $db_file = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'db.php';
+                        $db_php = 'db.php';
+                        $db_sqlite_plugin_php = SQLITE_DB_DIR.DIRECTORY_SEPARATOR.$db_php; // sqlite-db/db.php
+                        $db_file = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . $db_php;
+                        $db_plugin = SQLITE_DB_PATH . $db_php;
+                        $db_plugin = str_replace('/', DIRECTORY_SEPARATOR, $db_plugin);
+                        $db_require = 'require_once "'.$db_plugin.'";';
                         if (file_exists($db_file)) {
+                            $db_file_content = file_get_contents($db_file);
+                            if (strpos($db_file_content, $db_sqlite_plugin_php) === false) {
+                                $db_file_content = '<?php '.$db_require.' ?>'.PHP_EOL.$db_file_content;
+                                file_put_contents($db_file, $db_file_content);
+                            }
                             if (defined('DB_PDO') && DB_PDO == 'sqlite') {
                                 $this->wp_update_global_config('DB_PDO', 'mysql');
                             } else {
@@ -269,8 +279,10 @@ class SQLiteDb {
                             // check if its own db.php file (find DP_PDO constant)
                             // otherwise append require_once db.php
                         } else {
-                            copy(SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'db.php', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'db.php');
+                            file_put_contents($db_file, '<?php'.PHP_EOL.$db_require);
+                            //copy($db_plugin, $db_file);
                         }
+                        
                         break;
                 }
 
@@ -284,9 +296,10 @@ class SQLiteDb {
                   echo 'mysqldump-php error: ' . $e->getMessage();
                   }
                  */
-
+                $redirect_url = admin_url('options-general.php?page=sqlite-db');
+                //echo '<script>window.location.href = "'. $redirect_url .'";</script>';
                 // switch USE_MYSQL value in config.php
-                wp_redirect(admin_url('options-general.php?page=sqlite-db'));
+                wp_redirect($redirect_url);
             }
         }
     }
@@ -307,7 +320,9 @@ class SQLiteDb {
 
             if (strpos($str, $half) !== false) {
                 // update
-                $str = str_replace($half . " '" . constant($key) . "' );", $line, $str);
+                if (defined('DB_SQLITE')) {
+                    $str = str_replace($half . " '" . constant($key) . "' );", $line, $str);
+                }
             } else {
                 // add
                 $db_name = "define( 'DB_NAME',";

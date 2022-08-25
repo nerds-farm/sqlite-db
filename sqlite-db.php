@@ -25,10 +25,10 @@
  */
 
 /**
- * This file defines global constants and defines SQLiteIntegration class.
+ * This file defines global constants and defines SQLite DB class.
  *
- * @package SQLite Integration
- * @author Kojima Toshiyasu
+ * @package SQLite DB
+ * @author Nerds Farm
  */
 if (!defined('ABSPATH')) {
     echo 'Thank you, but you are not allowed to access this file.';
@@ -56,23 +56,9 @@ if (!defined('DB_PATH')) {
     define('DB_PATH', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
 }
 
-/*
- * Defines patch file upload directory.
- */
-//if (defined('UPLOADS')) {
-//    define('SQLITE_PATCH_DIR', UPLOADS . DIRECTORY_SEPARATOR . 'patches');
-//} else {
-//    if (defined('WP_CONTENT_DIR')) {
-        define('SQLITE_PATCH_DIR', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'patches');
-//    } else {
-//        define('SQLITE_PATCH_DIR', ABSPATH . 'wp-content' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'patches');
-//    }
-//}
-        
-/*
- * Plugin compatibility file in json format.
- */
-//define('SQLiteListFile', SQLITE_DB_PATH . DIRECTORY_SEPARATOR.'utilities'.DIRECTORY_SEPARATOR.'plugin_lists.json');
+define('SQLITE_PATCH_DIR', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'patches');
+require_once SQLITE_DB_PATH . 'class' . DIRECTORY_SEPARATOR . 'utils.php';
+require_once SQLITE_DB_PATH . 'functions.php';
 
 /*
  * Instantiates utility classes.

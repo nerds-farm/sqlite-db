@@ -14,7 +14,7 @@
  * This project is based on the original work of Kojima Toshiyasu and his SQLite Integration plugin.
  */
 
-namespace WP_SQLite_DB {
+namespace SQLite_DB {
 
     use DateTime;
     use DateInterval;
@@ -4828,7 +4828,7 @@ namespace {
         wp_cache_flush();
         /* begin wp-sqlite-db changes */
         // make_db_current_silent();
-        WP_SQLite_DB\make_db_sqlite();
+        SQLite_DB\make_db_sqlite();
         /* end wp-sqlite-db changes */
         populate_options();
         populate_roles();
@@ -4899,6 +4899,6 @@ namespace {
         return ['url' => $guessurl, 'user_id' => $user_id, 'password' => $user_password, 'password_message' => $message];
     }
 
-    $GLOBALS['wpdb'] = new WP_SQLite_DB\wpsqlitedb();
+    $GLOBALS['wpdb'] = new \SQLite_DB\wpsqlitedb();
 }
 
