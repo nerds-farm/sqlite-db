@@ -364,7 +364,7 @@ class PDOEngine extends PDO {
      * @return mixed according to the query type
      * @see PDO::query()
      */
-    public function query(string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs) {
+    public function query(string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs) { //: \PDOStatement|false {
         $this->flush();
 
         $this->queries[] = "Raw query:\n$query";
@@ -1382,7 +1382,7 @@ class PDOEngine extends PDO {
      * @see PDO::beginTransaction()
      * @return boolean
      */
-    public function beginTransaction() {
+    public function beginTransaction() { //: bool {
         if ($this->has_active_transaction) {
             return false;
         } else {
@@ -1396,9 +1396,9 @@ class PDOEngine extends PDO {
      *
      * @see PDO::commit()
      */
-    public function commit() {
-        $this->pdo->commit();
+    public function commit() { //: bool {
         $this->has_active_transaction = false;
+        return $this->pdo->commit();
     }
 
     /**
@@ -1406,9 +1406,9 @@ class PDOEngine extends PDO {
      *
      * @see PDO::rollBack()
      */
-    public function rollBack() {
-        $this->pdo->rollBack();
+    public function rollBack() { //: bool {
         $this->has_active_transaction = false;
+        return $this->pdo->rollBack();
     }
 
 }

@@ -451,7 +451,7 @@ define("COOKIENAME", preg_replace('/[^a-zA-Z0-9_]/', '_', $cookie_name . '_' . V
 $params = new \PhpLiteAdmin\GetParameters();
 
 // start the timer to record page load time
-$pageTimer = microtime();
+$pageTimer = microtime(true);
 
 // load language file
 if ($language != 'en') {
@@ -1142,34 +1142,36 @@ if ($auth->isAuthorized()) {
                 $whereExpr = array();
                 for ($i = 0; $i < sizeof($tableInfo); $i++) {
                     $field = $tableInfo[$i][1];
-                    $operator = $_POST['field_' . $i . '_operator'];
-                    $searchOperators[$field] = $operator;
-                    $value = $_POST['field_' . $i . '_value'];
-                    if ($value != "" || $operator == "!= ''" || $operator == "= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL') {
-                        if ($operator == "= ''" || $operator == "!= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL')
-                            $whereExpr[$j] = $db->quote_id($field) . " " . $operator;
-                        else {
-                            if ($operator == "LIKE%") {
-                                $operator = "LIKE";
-                                if (!preg_match('/(^%)|(%$)/', $value))
-                                    $value = '%' . $value . '%';
-                                $searchValues[$field] = array($value);
-                                $valueQuoted = $db->quote($value);
-                            } elseif ($operator == 'IN' || $operator == 'NOT IN') {
-                                $value = trim($value, '() ');
-                                $values = explode(',', $value);
-                                $values = array_map('trim', $values, array_fill(0, count($values), ' \'"'));
-                                if ($operator == 'IN')
-                                    $searchValues[$field] = $values;
-                                $values = array_map(array($db, 'quote'), $values);
-                                $valueQuoted = '(' . implode(', ', $values) . ')';
-                            } else {
-                                $searchValues[$field] = array($value);
-                                $valueQuoted = $db->quote($value);
+                    if (isset($_POST['field_' . $i . '_operator'])) {
+                        $operator = $_POST['field_' . $i . '_operator'];
+                        $searchOperators[$field] = $operator;
+                        $value = $_POST['field_' . $i . '_value'];
+                        if ($value != "" || $operator == "!= ''" || $operator == "= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL') {
+                            if ($operator == "= ''" || $operator == "!= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL')
+                                $whereExpr[$j] = $db->quote_id($field) . " " . $operator;
+                            else {
+                                if ($operator == "LIKE%") {
+                                    $operator = "LIKE";
+                                    if (!preg_match('/(^%)|(%$)/', $value))
+                                        $value = '%' . $value . '%';
+                                    $searchValues[$field] = array($value);
+                                    $valueQuoted = $db->quote($value);
+                                } elseif ($operator == 'IN' || $operator == 'NOT IN') {
+                                    $value = trim($value, '() ');
+                                    $values = explode(',', $value);
+                                    $values = array_map('trim', $values, array_fill(0, count($values), ' \'"'));
+                                    if ($operator == 'IN')
+                                        $searchValues[$field] = $values;
+                                    $values = array_map(array($db, 'quote'), $values);
+                                    $valueQuoted = '(' . implode(', ', $values) . ')';
+                                } else {
+                                    $searchValues[$field] = array($value);
+                                    $valueQuoted = $db->quote($value);
+                                }
+                                $whereExpr[$j] = $db->quote_id($field) . " " . $operator . " " . $valueQuoted;
                             }
-                            $whereExpr[$j] = $db->quote_id($field) . " " . $operator . " " . $valueQuoted;
+                            $j++;
                         }
-                        $j++;
                     }
                 }
                 $searchWhere = '';
@@ -2039,6 +2041,7 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
                         if (isset($_POST['query']) && $_POST['query'] != "") {
                             $delimiter = $_POST['delimiter'];
                             $queryStr = $_POST['queryval'];
+                            $queryStr = str_replace('\\"', '"', $queryStr);
                             //save the queries in history if necessary
                             if ($maxSavedQueries != 0 && $maxSavedQueries != false) {
                                 if (!isset($_SESSION[COOKIENAME . 'query_history']))
@@ -2051,7 +2054,7 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
 
                             for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
                                 if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
-                                    $queryTimer = microtime();
+                                    $queryTimer = microtime(true);
                                     $table_result = $db->query($query[$i]);
 
                                     echo "<div class='confirm'>";
@@ -2087,7 +2090,7 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
                                             }
                                             echo "</tr>";
                                         }
-                                        $queryTimer = microtime() - $queryTimer;
+                                        $queryTimer = microtime(true) - $queryTimer;
                                         echo "</table><br/><br/>";
 
                                         if ($table_result !== NULL && $table_result !== false) {
@@ -2477,9 +2480,9 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
 
                         //- Show results
                         if ($shownRows > 0) {
-                            $queryTimer = microtime();
+                            $queryTimer = microtime(true);
                             $table_result = $db->query($query);
-                            $queryTimer = microtime() - $queryTimer;
+                            $queryTimer = microtime(true) - $queryTimer;
 
                             echo "<br/><div class='confirm'>";
                             echo "<b>" . $lang['showing_rows'] . " " . $startRow . " - " . ($startRow + $shownRows - 1) . ", " . $lang['total'] . ": " . $totalRows . " ";
@@ -3628,7 +3631,7 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
 
                         for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
                             if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
-                                $queryTimer = microtime();
+                                $queryTimer = microtime(true);
                                 $table_result = $db->query($query[$i]);
 
                                 echo "<div class='confirm'>";
@@ -3664,7 +3667,7 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
                                         }
                                         echo "</tr>";
                                     }
-                                    $queryTimer = microtime() - $queryTimer;
+                                    $queryTimer = microtime(true) - $queryTimer;
                                     echo "</table><br/><br/>";
 
                                     if ($table_result !== NULL && $table_result !== false) {

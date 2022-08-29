@@ -74,7 +74,9 @@ class GetParameters {
         $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 'https' : 'http');
 
         //header("Location: " . $protocol . "://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'] . $url, true, 302);
-        wp_redirect($url);
+        //var_dump($url);
+        echo '<script>window.location.href = "'. $url .'";</script>';
+        //wp_redirect($url);
         exit;
     }
 
