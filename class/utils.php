@@ -19,7 +19,9 @@ class Utils {
             'path' => DB_SQLITE,
             'name' => DB_NAME,
         ];
-        define("FORCETYPE", false);
+        if (!defined("FORCETYPE")) {
+            define("FORCETYPE", false);
+        }
         $path = SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'phpliteadmin' . DIRECTORY_SEPARATOR;
         include_once $path . 'database.php';
         $db = new \PhpLiteAdmin\Database($args);

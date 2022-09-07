@@ -3869,5 +3869,5 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
 
 // resources embedded below, do not edit!
             wp_enqueue_style('phpliteadmin', SQLITE_DB_URL . 'utilities/phpliteadmin/css/phpliteadmin.css');
-            wp_enqueue_script('phpliteadmin', SQLITE_DB_URL . 'utilities/phpliteadmin/js/phpliteadmin.css');
+            wp_enqueue_script('phpliteadmin', SQLITE_DB_URL . 'utilities/phpliteadmin/js/phpliteadmin.js');
             ?>

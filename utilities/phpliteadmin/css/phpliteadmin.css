@@ -123,3 +123,50 @@ fieldset{
     background:#FF0;
     text-decoration:none
 }
+
+.body_tbl {
+    display: flex;
+    width: 100%;
+}
+.left_td {
+    position: relative;
+    background-color: white;
+    padding: 10px;
+    margin-right: 20px;
+    width: 30%;
+}
+.left_td.collapsed {
+    width: auto;
+}
+.left_td > .dashicons-admin-collapse {
+    position: absolute;
+    right: 10px;
+    cursor: pointer;
+}
+.left_td.collapsed > .dashicons-admin-collapse {
+    right: 0;
+    transform: rotate(180deg);
+}
+.left_td fieldset {
+    margin: 15px 0;
+}
+.right_td {
+    width: 70%;
+}
+.left_td.collapsed + .right_td {
+    width: calc(100% - 40px);
+}
+#wpfooter {
+    position: static;
+}
+#sqlite-main {
+    background-color: white;
+    border: 1px solid;
+    padding: 10px;
+    max-width: 100%;
+    width: auto;
+    overflow: auto;
+}
+.widefat td, .widefat th {
+    max-width: 400px;
+}
