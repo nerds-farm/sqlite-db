@@ -22,7 +22,7 @@ function wp_install($blog_title, $user_name, $user_email, $public, $deprecated =
 	wp_check_mysql_version();
 	wp_cache_flush();
 	/* changes */
-	require_once PDODIR . 'schema.php';
+	require_once SQLITE_DB_PATH . 'schema.php';
 	make_db_sqlite();
 	/* changes */
 	populate_options();
@@ -67,7 +67,7 @@ function wp_install($blog_title, $user_name, $user_email, $public, $deprecated =
 	if (isset($_SERVER['SERVER_SOFTWARE']) && stripos($_SERVER['SERVER_SOFTWARE'], 'apache') !== false || isset($_SERVER['SERVER_SIGNATURE']) && stripos($_SERVER['SERVER_SIGNATURE'], 'apache') !== false) {
 		;// Your server is Apache. Nothing to do more.
 	} else {
-		$server_message = sprintf('Your webserver doesn\'t seem to be Apache. So the database directory access restriction by the .htaccess file may not function. We strongly recommend that you should restrict the access to the directory %s in some other way.', FQDBDIR);
+		$server_message = sprintf('Your webserver doesn\'t seem to be Apache. So the database directory access restriction by the .htaccess file may not function. We strongly recommend that you should restrict the access to the directory %s in some other way.', DB_PATH);
 		echo '<div style="position: absolute; margin-top: 350px; width: 700px; border: .5px dashed rgb(0, 0, 0);"><p style="margin: 10px;">';
 		echo $server_message;
 		echo '</p></div>';

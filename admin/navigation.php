@@ -6,6 +6,7 @@ $pages = [
   'patch' => __('Patch Utility', 'sqlite-db'),
   'maintenance' => __('Maintenance', 'sqlite-db'),
   'explorer' => __('Explorer', 'sqlite-db'),
+  'tuning' => __('Tuning', 'sqlite-db'),
 ];
 ?>
 <nav class="nav-tab-wrapper wp-clearfix" aria-label="Secondary menu">

@@ -28,7 +28,7 @@ class SQLiteIntegrationDocument {
         }
         if (isset($_GET['page']) && $_GET['page'] == 'doc') :
             ?>
-                    <?php include_once SQLITE_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
+                    <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
             <div class="wrap" id="sqlite-admin-wrap">
                 <h2><?php _e('Documentation', $domain); ?></h2>
                 <p>
