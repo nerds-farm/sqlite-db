@@ -664,6 +664,10 @@ class SQLiteIntegrationUtils {
                             <td><a href="<?php echo $this->show_parent(); ?>?page=maintenance"><?php _e('Maintenance', $domain); ?></a></td>
                             <td><?php _e('You can check your database and fix it if needed.', $domain); ?></td>
                         </tr>
+                        <tr>
+                            <td><a href="<?php echo $this->show_parent(); ?>?page=explorer"><?php _e('Explorer', $domain); ?></a></td>
+                            <td><?php _e('You can read, edit and execute Custom SQL on your DB.', $domain); ?></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>

@@ -51,6 +51,10 @@ $password = '';
 
 //directory relative to this file to search for databases (if false, manually list databases in the $databases variable)
 $directory = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database';
+if (defined('DB_DIR')) {
+    $directory = DB_DIR;
+}
+$directory = str_replace('/', DIRECTORY_SEPARATOR, $directory);
 
 //whether or not to scan the subdirectories of the above directory infinitely deep
 $subdirectories = false;
@@ -59,13 +63,9 @@ $subdirectories = false;
 //if any of the databases do not exist as they are referenced by their path, they will be created automatically
 $databases = array(
     array(
-        'path' => 'database1.sqlite',
-        'name' => 'Database 1'
-    ),
-    array(
-        'path' => 'database2.sqlite',
-        'name' => 'Database 2'
-    ),
+        'path' => defined('DB_FILE') ? DB_FILE : '.ht.sqlite',
+        'name' => 'Wordpress'
+    )
 );
 
 /* ---- Interface settings ---- */
@@ -443,7 +443,7 @@ define("COOKIENAME", preg_replace('/[^a-zA-Z0-9_]/', '_', $cookie_name . '_' . V
 $params = new GetParameters();
 
 // start the timer to record page load time
-$pageTimer = new MicroTimer();
+$pageTimer = microtime();
 
 // load language file
 if ($language != 'en') {
@@ -456,6 +456,7 @@ if ($language != 'en') {
     unset($temp_lang);
 }
 
+/*
 // stripslashes if MAGIC QUOTES is turned on
 // This is only a workaround. Please better turn off magic quotes!
 // This code is from http://php.net/manual/en/security.magicquotes.disabling.php
@@ -476,6 +477,7 @@ if (function_exists('get_magic_quotes_gpc')) {
         unset($process);
     }
 }
+*/
 
 //data types array
 $sqlite_datatypes = array("INTEGER", "REAL", "TEXT", "BLOB", "NUMERIC", "BOOLEAN", "DATETIME");
@@ -808,7 +810,10 @@ if ($auth->isAuthorized()) {
     // we now have the $databases array set. Check whether selected DB is a managed Db (is in this array)
     if (!isset($currentDB) && (isset($_GET['database']) || isset($_POST['database']) )) {
         $selected_db = ( isset($_POST['database']) ? $_POST['database'] : $_GET['database'] );
+        $selected_db = str_replace('\\\\', '\\', $selected_db);
+        //var_dump($selected_db); die();
         $db_key = isManagedDB($selected_db);
+        
         if ($db_key !== false) {
             $currentDB = $databases[$db_key];
             $params->database = $databases[$db_key]['path'];
@@ -2055,7 +2060,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
 
                 for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
                     if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
-                        $queryTimer = new MicroTimer();
+                        $queryTimer = microtime();
                         $table_result = $db->query($query[$i]);
 
                         echo "<div class='confirm'>";
@@ -2091,7 +2096,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                                 }
                                 echo "</tr>";
                             }
-                            $queryTimer->stop();
+                            $queryTimer = microtime() - $queryTimer;
                             echo "</table><br/><br/>";
 
                             if ($table_result !== NULL && $table_result !== false) {
@@ -2481,9 +2486,9 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
 
             //- Show results
             if ($shownRows > 0) {
-                $queryTimer = new MicroTimer();
+                $queryTimer = microtime();
                 $table_result = $db->query($query);
-                $queryTimer->stop();
+                $queryTimer = microtime() - $queryTimer;
 
                 echo "<br/><div class='confirm'>";
                 echo "<b>" . $lang['showing_rows'] . " " . $startRow . " - " . ($startRow + $shownRows - 1) . ", " . $lang['total'] . ": " . $totalRows . " ";
@@ -3632,7 +3637,7 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($_GET['action']) || (i
 
             for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
                 if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
-                    $queryTimer = new MicroTimer();
+                    $queryTimer = microtime();
                     $table_result = $db->query($query[$i]);
 
                     echo "<div class='confirm'>";
@@ -3668,7 +3673,7 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($_GET['action']) || (i
                             }
                             echo "</tr>";
                         }
-                        $queryTimer->stop();
+                        $queryTimer = microtime() - $queryTimer;
                         echo "</table><br/><br/>";
 
                         if ($table_result !== NULL && $table_result !== false) {
@@ -4186,7 +4191,8 @@ class Database {
 
     //get the filename of the database
     public function getPath() {
-        return $this->data["path"];
+        $path = str_replace('/', DIRECTORY_SEPARATOR, $this->data["path"]);
+        return $path;
     }
 
     //is the db-file writable?
@@ -5553,7 +5559,6 @@ function getInternalResource($res) {
     }
     fieldset{
         padding:15px;
-        border-color:#03F;
         border-width:1px;
         border-style:solid;
         border-radius:5px;
@@ -5576,7 +5581,7 @@ function getInternalResource($res) {
         padding:5px;
         padding-right:8px;
         padding-left:8px;
-        border-color:#03F;
+        border-color:#999;
         border-width:1px;
         border-style:solid;
         margin-right:5px;
@@ -5596,7 +5601,7 @@ function getInternalResource($res) {
         padding:5px;
         padding-right:8px;
         padding-left:8px;
-        border-color:#03F;
+        border-color:#666;
         border-width:1px;
         border-style:solid;
         margin-right:5px;

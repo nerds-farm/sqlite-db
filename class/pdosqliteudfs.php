@@ -2,7 +2,7 @@
 /**
  * This file contains the class that defines user defined functions for PDO library.
  *
- * This file is for PHP 5.2.x or lesser. For PHP 5.3.x or later, functions.php is
+ * This file is for PHP 5.3.x or later. For PHP 5.2.x or lesser, functions-5-2.php is
  * loaded. PHP version is checked in the db.php and that will load the apropriate
  * one.
  *
@@ -27,9 +27,9 @@
  */
 class PDOSQLiteUDFS {
 	/**
-	 * Constructor
+	 * The class constructor
 	 *
-	 * Initialize the user defined functions to the PDO object with PDO::sqliteCreateFunction().
+	 * Initializes the use defined functions to PDO object with PDO::sqliteCreateFunction().
 	 *
 	 * @param reference to PDO object $pdo
 	 */
@@ -42,7 +42,9 @@ class PDOSQLiteUDFS {
 		}
 	}
 	/**
-	 * Array to associate MySQL function to the substituted one.
+	 * array to define MySQL function => function defined with PHP.
+	 *
+	 * Replaced functions must be public.
 	 *
 	 * @var associative array
 	 */
@@ -110,12 +112,12 @@ class PDOSQLiteUDFS {
 		$t = strtotime($field);
 		return date('Y', $t);
 	}
-  /**
-   * Method to extract the day value from the date.
-   *
-   * @param string representing the date formated as 0000-00-00.
-   * @return string representing the number of the day of the month from 1 and 31.
-   */
+	/**
+	 * Method to extract the day value from the date.
+	 *
+	 * @param string representing the date formated as 0000-00-00.
+	 * @return string representing the number of the day of the month from 1 and 31.
+	 */
 	public function day($field){
 		$t = strtotime($field);
 		return date('j', $t);
@@ -224,7 +226,7 @@ class PDOSQLiteUDFS {
 	 * @return unsigned integer
 	 */
 	public function rand(){
-		return mt_rand(0,1);
+		return mt_rand(0, 1);
 	}
 	/**
 	 * Method to emulate MySQL SUBSTRING() function.
@@ -249,7 +251,7 @@ class PDOSQLiteUDFS {
 	 */
 	public function dateformat($date, $format){
 		$mysql_php_dateformats = array ( '%a' => 'D', '%b' => 'M', '%c' => 'n', '%D' => 'jS', '%d' => 'd', '%e' => 'j', '%H' => 'H', '%h' => 'h', '%I' => 'h', '%i' => 'i', '%j' => 'z', '%k' => 'G', '%l' => 'g', '%M' => 'F', '%m' => 'm', '%p' => 'A', '%r' => 'h:i:s A', '%S' => 's', '%s' => 's', '%T' => 'H:i:s', '%U' => 'W', '%u' => 'W', '%V' => 'W', '%v' => 'W', '%W' => 'l', '%w' => 'w', '%X' => 'Y', '%x' => 'o', '%Y' => 'Y', '%y' => 'y', );
-		$t = strtotime($date);
+		$t      = strtotime($date);
 		$format = strtr($format, $mysql_php_dateformats);
 		$output =  date($format, $t);
 		return $output;
@@ -269,17 +271,17 @@ class PDOSQLiteUDFS {
 		$interval = $this->deriveInterval($interval);
 		switch (strtolower($date)) {
 			case "curdate()":
-				$objDate = new Datetime($this->curdate());
+				$objDate   = new Datetime($this->curdate());
 				$objDate->add(new DateInterval($interval));
 				$returnval = $objDate->format("Y-m-d");
 				break;
 			case "now()":
-				$objDate = new Datetime($this->now());
+				$objDate   = new Datetime($this->now());
 				$objDate->add(new DateInterval($interval));
 				$returnval = $objDate->format("Y-m-d H:i:s");
 				break;
 			default:
-				$objDate = new Datetime($date);
+				$objDate   = new Datetime($date);
 				$objDate->add(new DateInterval($interval));
 				$returnval = $objDate->format("Y-m-d H:i:s");
 		}
@@ -300,17 +302,17 @@ class PDOSQLiteUDFS {
 		$interval = $this->deriveInterval($interval);
 		switch (strtolower($date)) {
 			case "curdate()":
-				$objDate = new Datetime($this->curdate());
+				$objDate   = new Datetime($this->curdate());
 				$objDate->sub(new DateInterval($interval));
 				$returnval = $objDate->format("Y-m-d");
 				break;
 			case "now()":
-				$objDate = new Datetime($this->now());
+				$objDate   = new Datetime($this->now());
 				$objDate->sub(new DateInterval($interval));
 				$returnval = $objDate->format("Y-m-d H:i:s");
 				break;
 			default:
-				$objDate = new Datetime($date);
+				$objDate   = new Datetime($date);
 				$objDate->sub(new DateInterval($interval));
 				$returnval = $objDate->format("Y-m-d H:i:s");
 		}
@@ -323,85 +325,47 @@ class PDOSQLiteUDFS {
 	 * @param string $interval white space separated expression.
 	 * @return string representing the time to add or substract.
 	 */
-	private function deriveInterval($interval){
+	private function deriveInterval($interval) {
 		$interval = trim(substr(trim($interval), 8));
 		$parts = explode(' ', $interval);
-		foreach($parts as $part){
-			if (!empty($part)){
+		foreach ($parts as $part) {
+			if (!empty($part)) {
 				$_parts[] = $part;
 			}
 		}
 		$type = strtolower(end($_parts));
-		switch ($type){
-			case "second":
-			case "minute":
-			case "hour":
-			case "day":
-			case "week":
-			case "month":
-			case "year":
-				if (intval($_parts[0]) > 1){
-					$type .= 's';
-				}
-				return "$_parts[0] $_parts[1]";
+		switch ($type) {
+			case "second": $unit = 'S'; return 'PT' . $_parts[0] . $unit; break;
+			case "minute": $unit = 'M'; return 'PT' . $_parts[0] . $unit; break;
+			case "hour":   $unit = 'H'; return 'PT' . $_parts[0] . $unit; break;
+			case "day":    $unit = 'D'; return 'P'  . $_parts[0] . $unit; break;
+			case "week":   $unit = 'W'; return 'P'  . $_parts[0] . $unit; break;
+			case "month":  $unit = 'M'; return 'P'  . $_parts[0] . $unit; break;
+			case "year":   $unit = 'Y'; return 'P'  . $_parts[0] . $unit; break;
 			case "minute_second":
-				list($minutes, $seconds) = explode (':', $_parts[0]);
-				$minutes = intval($minutes);
-				$seconds = intval($seconds);
-				$minutes = ($minutes > 1) ? "$minutes minutes" : "$minutes minute";
-				$seconds = ($seconds > 1) ? "$seconds seconds" : "$seconds second";
-				return "$minutes $seconds";
+				list($minutes, $seconds) = explode(':', $_parts[0]);
+				return 'PT' . $minutes . 'M' . $seconds . 'S';
 			case "hour_second":
 				list($hours, $minutes, $seconds) = explode (':', $_parts[0]);
-				$hours = intval($hours);
-				$minutes = intval($minutes);
-				$seconds = intval($seconds);
-				$hours = ($hours > 1) ? "$hours hours" : "$hours hour";
-				$minutes = ($minutes > 1) ? "$minutes minutes" : "$minutes minute";
-				$seconds = ($seconds > 1) ? "$seconds seconds" : "$seconds second";
-				return "$hours $minutes $seconds";
+				return 'PT' . $hours . 'H' . $minutes . 'M' . $seconds . 'S';
 			case "hour_minute":
 				list($hours, $minutes) = explode (':', $_parts[0]);
-				$hours = intval($hours);
-				$minutes = intval($minutes);
-				$hours = ($hours > 1) ? "$hours hours" : "$hours hour";
-				$minutes = ($minutes > 1) ? "$minutes minutes" : "$minutes minute";
-				return "$hours $minutes";
+				return 'PT' . $hours . 'H' . $minutes . 'M';
 			case "day_second":
 				$days = intval($_parts[0]);
 				list($hours, $minutes, $seconds) = explode (':', $_parts[1]);
-				$hours = intval($hours);
-				$minutes = intval($minutes);
-				$seconds = intval($seconds);
-				$days = $days > 1 ? "$days days" : "$days day";
-				$hours = ($hours > 1) ? "$hours hours" : "$hours hour";
-				$minutes = ($minutes > 1) ? "$minutes minutes" : "$minutes minute";
-				$seconds = ($seconds > 1) ? "$seconds seconds" : "$seconds second";
-				return "$days $hours $minutes $seconds";
+				return 'P' . $days . 'D' . 'T' . $hours . 'H' . $minutes . 'M' . $seconds . 'S';
 			case "day_minute":
 				$days = intval($_parts[0]);
-				list($hours, $minutes) = explode (':', $_parts[1]);
-				$hours = intval($hours);
-				$minutes = intval($minutes);
-				$days = $days > 1 ? "$days days" : "$days day";
-				$hours = ($hours > 1) ? "$hours hours" : "$hours hour";
-				$minutes = ($minutes > 1) ? "$minutes minutes" : "$minutes minute";
-				return "$days $hours $minutes";
+				list($hours, $minutes) = explode(':', $parts[1]);
+				return 'P' . $days . 'D' . 'T' . $hours . 'H' . $minutes . 'M';
 			case "day_hour":
-				$days = intval($_parts[0]);
+				$days  = intval($_parts[0]);
 				$hours = intval($_parts[1]);
-				$days = $days > 1 ? "$days days" : "$days day";
-				$hours = ($hours > 1) ? "$hours hours" : "$hours hour";
-				return "$days $hours";
+				return 'P' . $days . 'D' . 'T' . $hours . 'H';
 			case "year_month":
 				list($years, $months) = explode ('-', $_parts[0]);
-				$years = intval($years);
-				$months = intval($months);
-				$years = ($years > 1) ? "$years years" : "$years year";
-				$months = ($months > 1) ? "$months months": "$months month";
-				return "$years $months";
-			default:
-			return false;
+				return 'P' . $years . 'Y' . $months . 'M';
 		}
 	}
 	/**
@@ -460,7 +424,7 @@ class PDOSQLiteUDFS {
 	 */
 	public function concat() {
 		$returnValue = "";
-		$argsNum = func_num_args();
+		$argsNum  = func_num_args();
 		$argsList = func_get_args();
 		for ($i = 0; $i < $argsNum; $i++) {
 			if (is_null($argsList[$i])) {
@@ -592,6 +556,7 @@ class PDOSQLiteUDFS {
 	/**
 	 * Method to emulate MySQL LCASE() function.
 	 *
+	 *
 	 * This is MySQL alias for lower() function. This function rewrites it
 	 * to SQLite compatible name lower().
 	 *
@@ -638,10 +603,17 @@ class PDOSQLiteUDFS {
 	 * @return string
 	 */
 	public function datediff($start, $end) {
-		$start_date = strtotime($start);
-		$end_date   = strtotime($end);
-		$interval = floor(($end_date - $start_date)/(3600*24));
-		return $interval;
+		if (version_compare(PHP_VERSION, '5.3.2', '==')) {
+			$start_date = strtotime($start);
+			$end_date   = strtotime($end);
+			$interval   = floor(($start_date - $end_date)/(3600*24));
+			return $interval;
+		} else {
+			$start_date = new DateTime($start);
+			$end_date   = new DateTime($end);
+			$interval   = $end_date->diff($start_date, false);
+			return $interval->format('%r%a');
+		}
 	}
 	/**
 	 * Method to emulate MySQL LOCATE() function.

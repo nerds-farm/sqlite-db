@@ -182,7 +182,7 @@ class PDOEngine extends PDO {
 			do {
 				try {
 					$this->pdo = new PDO($dsn, null, null, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
-					require_once UDF_FILE;
+					require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'pdosqliteudfs.php';
 					new PDOSQLiteUDFS($this->pdo);
 					$GLOBALS['@pdo'] = $this->pdo;
 				} catch (PDOException $ex) {
@@ -591,13 +591,13 @@ class PDOEngine extends PDO {
 	 */
 	private function prepare_engine($query_type = null) {
 		if (stripos($query_type, 'create') !== false) {
-			require_once PDODIR . 'query_create.class.php';
+			require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query_create.php';
 			$engine = new CreateQuery();
 		} elseif (stripos($query_type, 'alter') !== false) {
-			require_once PDODIR . 'query_alter.class.php';
+			require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query_alter.php';
 			$engine = new AlterQuery();
 		} else {
-			require_once PDODIR . 'query.class.php';
+			require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query.php';
 			$engine = new PDOSQLiteDriver();
 		}
 		return $engine;
@@ -1268,7 +1268,7 @@ class PDOEngine extends PDO {
 				$value = preg_replace("/[\';]/", '', $value);
 				$value = trim($value);
 				foreach ($_results as $result) {
-					if (stripos($value, $result->$key) !== false) {
+					if (!empty($result->$key) && stripos($value, $result->$key) !== false) {
 						unset($_results);
 						$_results[] = $result;
 						break;

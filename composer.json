@@ -1,0 +1,7 @@
+{
+    "minimum-stability": "dev",
+    "require": {
+        "ifsnop/mysqldump-php": "^2.9",
+        "pilulka/mysql2sqlite": "dev-master"
+    }
+}

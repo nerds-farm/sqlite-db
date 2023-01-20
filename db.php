@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file defines some constant required for SQLite Integration.
  *
@@ -11,8 +12,8 @@
  *
  */
 if (!defined('ABSPATH')) { // Oh, you are not WordPress!
-	echo 'Thank you, but you are not allowed to access here.';
-	die();
+    echo 'Thank you, but you are not allowed to access here.';
+    die();
 }
 
 /*
@@ -31,15 +32,16 @@ if (!defined('ABSPATH')) { // Oh, you are not WordPress!
  * define('USE_MYSQL', false);
  * </code>
  */
-if (defined('USE_MYSQL') && USE_MYSQL) return;
+if (defined('USE_MYSQL') && USE_MYSQL)
+    return;
 
 function pdo_log_error($message, $data = null) {
-	if (strpos($_SERVER['SCRIPT_NAME'], 'wp-admin') !== false) {
-		$admin_dir = '';
-	} else {
-		$admin_dir = 'wp-admin/';
-	}
-	die(<<<HTML
+    if (strpos($_SERVER['SCRIPT_NAME'], 'wp-admin') !== false) {
+        $admin_dir = '';
+    } else {
+        $admin_dir = 'wp-admin/';
+    }
+    die(<<<HTML
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -56,19 +58,19 @@ function pdo_log_error($message, $data = null) {
 <html>
 
 HTML
-);
+    );
 }
 
-if (version_compare( PHP_VERSION, '5.2.4', '<')) {
-	pdo_log_error('PHP version on this server is too old.', sprinf("Your server is running PHP version %d but this version of WordPress requires at least 5.2.4", phpversion()));
+if (version_compare(PHP_VERSION, '5.2.4', '<')) {
+    pdo_log_error('PHP version on this server is too old.', sprinf("Your server is running PHP version %d but this version of WordPress requires at least 5.2.4", phpversion()));
 }
 
 if (!extension_loaded('pdo')) {
-	pdo_log_error('PHP PDO Extension is not loaded.', 'Your PHP installation appears to be missing the PDO extension which is required for this version of WordPress.');
+    pdo_log_error('PHP PDO Extension is not loaded.', 'Your PHP installation appears to be missing the PDO extension which is required for this version of WordPress.');
 }
 
 if (!extension_loaded('pdo_sqlite')) {
-	pdo_log_error('PDO Driver for SQLite is missing.', 'Your PHP installtion appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.');
+    pdo_log_error('PDO Driver for SQLite is missing.', 'Your PHP installtion appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.');
 }
 
 /*
@@ -83,51 +85,42 @@ if (!extension_loaded('pdo_sqlite')) {
  * PDODIR is SQLite Integration installed directory.
  */
 if (defined('WP_PLUGIN_DIR')) {
-	define('PDODIR', WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
+    define('PDODIR', WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
 } else {
-	if (defined('WP_CONTENT_DIR')) {
-		$tmp = str_replace('/', DIRECTORY_SEPARATOR, WP_CONTENT_DIR . DIRECTORY_SEPARATOR .'plugins' . DIRECTORY_SEPARATOR . 'sqlite-db'. DIRECTORY_SEPARATOR);
-	} else {
-		$tmp = str_replace('/', DIRECTORY_SEPARATOR, ABSPATH . 'wp-content' . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'sqlite-db'. DIRECTORY_SEPARATOR);
-	}
-	define('PDODIR', $tmp);
+    if (defined('WP_CONTENT_DIR')) {
+        $tmp = str_replace('/', DIRECTORY_SEPARATOR, WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
+    } else {
+        $tmp = str_replace('/', DIRECTORY_SEPARATOR, ABSPATH . 'wp-content' . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
+    }
+    define('PDODIR', $tmp);
 }
 
-//var_dump(PDODIR); die();
 /*
  * FQDBDIR is a directory where the sqlite database file is placed.
  * If DB_DIR is defined, it is used as FQDBDIR.
  */
 if (defined('DB_DIR')) {
-	if (substr(DB_DIR, -1, 1) != DIRECTORY_SEPARATOR) {
-		define('FQDBDIR', DB_DIR . DIRECTORY_SEPARATOR);
-	} else {
-		define('FQDBDIR', DB_DIR);
-	}
+    if (substr(DB_DIR, -1, 1) != DIRECTORY_SEPARATOR) {
+        define('FQDBDIR', DB_DIR . DIRECTORY_SEPARATOR);
+    } else {
+        define('FQDBDIR', DB_DIR);
+    }
 } else {
-	if (defined('WP_CONTENT_DIR')) {
-		define('FQDBDIR', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
-	} else {
-		define('FQDBDIR', ABSPATH . 'wp-content' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
-	}
+    if (defined('WP_CONTENT_DIR')) {
+        define('FQDBDIR', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
+    } else {
+        define('FQDBDIR', ABSPATH . 'wp-content' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
+    }
 }
 /*
  * FQDB is a database file name. If DB_FILE is defined, it is used
  * as FQDB.
  */
-if ( defined('DB_FILE' )) {
-	define('FQDB', FQDBDIR . DB_FILE);
+if (defined('DB_FILE')) {
+    define('FQDB', FQDBDIR . DB_FILE);
 } else {
-	define('FQDB', FQDBDIR . '.ht.sqlite');
-}
-/*
- * UDF_FILE is a file that contains user defined functions.
- */
-if (version_compare(PHP_VERSION, '5.3', '<')) {
-	define('UDF_FILE', PDODIR . 'functions-5-2.php');
-} elseif (version_compare(PHP_VERSION, '5.3', '>=')) {
-	define('UDF_FILE', PDODIR . 'functions.php');
+    define('FQDB', FQDBDIR . '.ht.sqlite');
 }
 
-require_once PDODIR . 'pdodb.class.php';
+require_once PDODIR . 'class' . DIRECTORY_SEPARATOR . 'pdodb.php';
 ?>

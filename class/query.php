@@ -372,7 +372,7 @@ class PDOSQLiteDriver {
 	 * @access private
 	 */
 	private function handle_create_query(){
-		require_once PDODIR . 'query_create.class.php';
+		require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query_create.php';
 		$engine = new CreateQuery();
 		$this->_query = $engine->rewrite_query($this->_query);
 		$engine = null;
@@ -387,7 +387,7 @@ class PDOSQLiteDriver {
 	 * @access private
 	 */
 	private function handle_alter_query(){
-		require_once PDODIR . 'query_alter.class.php';
+		require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query_alter.php';
 		$engine = new AlterQuery();
 		$this->_query = $engine->rewrite_query($this->_query, 'alter');
 		$engine = null;

@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
  * @return boolean
  */
 function make_db_sqlite() {
-	include_once PDODIR . 'query_create.class.php';
+	include_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query_create.php';
 	include_once ABSPATH . 'wp-admin/includes/schema.php';
 	$index_array   = array();
 
