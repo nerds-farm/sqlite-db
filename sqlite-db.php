@@ -34,27 +34,14 @@ if (!defined('ABSPATH')) {
     echo 'Thank you, but you are not allowed to access this file.';
     die();
 }
-/*
- * This will be activated after the installation is finished.
- * So you can use all the functionality of WordPress.
- */
-$siteurl = get_option('siteurl');
+
 /*
  * Defines basic constants.
  */
+require_once('constant.php');
 define('SQLITE_DB_VERSION', '2.0');
 define('SQLITE_DB_DIR', dirname(plugin_basename(__FILE__)));
-if (!defined('SQLITE_DB_PATH')) {
-    define('SQLITE_DB_PATH', dirname(__FILE__). DIRECTORY_SEPARATOR);
-}
 define('SQLITE_DB_URL', WP_PLUGIN_URL . '/' . SQLITE_DB_DIR . '/');
-
-if (!defined('DB_PDO')) {
-    define( 'DB_PDO', 'mysql' );
-}
-if (!defined('DB_PATH')) {
-    define('DB_PATH', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
-}
 
 define('SQLITE_PATCH_DIR', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'patches');
 require_once SQLITE_DB_PATH . 'class' . DIRECTORY_SEPARATOR . 'utils.php';
@@ -63,6 +50,7 @@ require_once SQLITE_DB_PATH . 'functions.php';
 /*
  * Instantiates utility classes.
  */
+
 if (!class_exists('SQLiteIntegrationUtils')) {
     require_once SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'utility.php';
     $utils = new SQLiteIntegrationUtils();

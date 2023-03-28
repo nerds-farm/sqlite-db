@@ -152,6 +152,7 @@ fieldset{
 }
 .right_td {
     width: 70%;
+    /*overflow: auto;*/
 }
 .left_td.collapsed + .right_td {
     width: calc(100% - 40px);

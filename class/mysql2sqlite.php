@@ -65,22 +65,23 @@ class Mysql2Sqlite {
                 //$fieldType = "INTEGER";	
                 $pkFields[] = $row["Field"];
             } else if ($row["Key"] == "MUL") {
-                $indexFields[] = "CREATE INDEX " . $row["Field"] . "_index ON " . $tableName . "(" . $row["Field"] . ")";
+                $indexFields[] = "CREATE INDEX `" . $row["Field"] . "_".$tableName . "_index` ON " . $tableName . "(`" . $row["Field"] . "`)";
             }
-            $createFields[] = $row["Field"] . " " . $fieldType;
+            $createFields[] = "`".$row["Field"]."`" . " " . $fieldType;
         }
 
         if (count($pkFields)) {
-            array_push($createFields, "PRIMARY KEY (" . implode(",", $pkFields) . ")");
+            array_push($createFields, "PRIMARY KEY (`" . implode("`,`", $pkFields) . "`)");
         }
 
         // create the table
-        $sqlite->exec("CREATE TABLE " . $tableName . " (" . implode(",", $createFields) . ")");
+        $create = "CREATE TABLE " . $tableName . " (" . implode(",", $createFields) . ")";
+        $sqlite->exec($create);
 
         // insert statement
         $insertSqlPart = str_repeat("?,", count($tableFields));
         $insertSqlPart = substr($insertSqlPart, 0, -1);
-        $insertSql = "INSERT INTO " . $tableName . "(" . implode(",", $tableFields) . ") VALUES ( " . $insertSqlPart . " ) ";
+        $insertSql = "INSERT INTO " . $tableName . "(`" . implode("`,`", $tableFields) . "`) VALUES ( " . $insertSqlPart . " ) ";
         $sth = $sqlite->prepare($insertSql);
 
         // get the number of records in the table

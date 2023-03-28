@@ -15,16 +15,19 @@ namespace SQLite_DB;
 class Utils {
     
     public static function get_sqlite_db() {
-        $args = [
-            'path' => DB_SQLITE,
-            'name' => DB_NAME,
-        ];
-        if (!defined("FORCETYPE")) {
-            define("FORCETYPE", false);
+        $db = [];
+        if (defined('FQDB')) {
+            $args = [
+                'path' => FQDB,
+                'name' => DB_NAME,
+            ];
+            if (!defined("FORCETYPE")) {
+                define("FORCETYPE", false);
+            }
+            $path = SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'phpliteadmin' . DIRECTORY_SEPARATOR;
+            include_once $path . 'database.php';
+            $db = new \PhpLiteAdmin\Database($args);
         }
-        $path = SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'phpliteadmin' . DIRECTORY_SEPARATOR;
-        include_once $path . 'database.php';
-        $db = new \PhpLiteAdmin\Database($args);
         return $db;
     }
 

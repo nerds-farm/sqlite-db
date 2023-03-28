@@ -225,7 +225,7 @@ class Database {
     //get the version of the database
     public function getVersion() {
         if (file_exists($this->data['path'])) { //make sure file exists before getting its contents
-            $content = strtolower(file_get_contents($this->data['path'], NULL, NULL, 0, 40)); //get the first 40 characters of the database file
+            $content = strtolower(file_get_contents($this->data['path'], false, NULL, 0, 40)); //get the first 40 characters of the database file
             $p = strpos($content, "** this file contains an sqlite 2"); //this text is at the beginning of every SQLite2 database
             if ($p !== false) //the text is found - this is version 2
                 return 2;

@@ -20,7 +20,7 @@ class SQLiteIntegrationUtils {
      *
      * @var string
      */
-    public $text_domain = 'sqlite-integration';
+    public $text_domain = 'sqlite-db';
 
     /**
      * Constructor
@@ -332,12 +332,15 @@ class SQLiteIntegrationUtils {
      * @access private
      */
     private function get_database_size() {
-        $db_file = DB_SQLITE;
-        if (file_exists($db_file)) {
-            $size = filesize($db_file);
-            clearstatcache(true, $db_file);
-            return $this->convert_to_formatted_number($size);
+        if (defined('DB_SQLITE')) {
+            $db_file = DB_SQLITE;
+            if (file_exists($db_file)) {
+                $size = filesize($db_file);
+                clearstatcache(true, $db_file);
+                return $this->convert_to_formatted_number($size);
+            }
         }
+        return 0;
     }
 
     /**
@@ -489,15 +492,17 @@ class SQLiteIntegrationUtils {
      * @access private
      */
     private function get_backup_files() {
-        $db_name = basename(DB_SQLITE);
-        $names_to_exclude = array('.', '..', '.htaccess', 'debug.txt', '.ht.sqlite', 'index.php', $db_name);
         $backup_files = array();
-        if (is_dir(DB_PATH)) {
-            if ($dir_handle = opendir(DB_PATH)) {
-                while (($file_name = readdir($dir_handle)) !== false) {
-                    if (in_array($file_name, $names_to_exclude))
-                        continue;
-                    $backup_files[] = $file_name;
+        if (defined('DB_SQLITE')) {
+            $db_name = basename(DB_SQLITE);
+            $names_to_exclude = array('.', '..', '.htaccess', 'debug.txt', '.ht.sqlite', 'index.php', $db_name);
+            if (is_dir(DB_PATH)) {
+                if ($dir_handle = opendir(DB_PATH)) {
+                    while (($file_name = readdir($dir_handle)) !== false) {
+                        if (in_array($file_name, $names_to_exclude))
+                            continue;
+                        $backup_files[] = $file_name;
+                    }
                 }
             }
         }
@@ -622,149 +627,7 @@ class SQLiteIntegrationUtils {
     }
 
     /**
-     * Method to show Welcome page.
-     *
-     */
-    function welcome() {
-        $domain = $this->text_domain;
-        if (isset($_GET['page']) && $_GET['page'] == 'sqlite-db') {
-            ?>
-            <div class="wrap single" id="sqlite-admin-wrap">
-                <h2><?php _e('Welcome to SQLite Integration', $domain) ?></h2>
-                <p>
-            <?php _e('Thank you for using SQLite Integration plugin!', $domain) ?>
-                </p>
-                <p>
-            <?php _e('You read this message, which means you have succeeded in installing WordPress with this plugin SQLite DB. Congratulations and enjoy your Blogging!', $domain) ?>
-                </p>
-
-
-                <div class="card">
-                    <a href="?page=sqlite-db&action=clone" class="button">1. Clone current MySQL to SQLite</a>
-                    <br><br>
-                    <?php
-                    $tmp = DB_PATH . '*.sqlite';
-                    //var_dump($tmp);
-                    $dbs = array_merge(glob(DB_PATH . '.*.sqlite'), glob($tmp)); //glob($tmp);
-                    if (!empty($dbs)) {
-                        ?>
-                        <form action="?" method="GET">
-                            <input type="hidden" name="page" value="sqlite-db" />
-                            <input type="hidden" name="action" value="set" />
-                            <input type="submit" value="2. Set SQLite DB File" class="button">
-                            <select name="db_sqlite">
-                                <?php
-                                foreach ($dbs as $sdb) {
-                                    $sdb = str_replace('/', DIRECTORY_SEPARATOR, $sdb);
-                                    $selected = (defined('DB_SQLITE') && DB_SQLITE == $sdb) ? ' selected' : '';
-                                    ?>
-                                    <option value="<?php echo $sdb; ?>"<?php echo $selected; ?>><?php echo $sdb; ?></option>
-                                <?php }
-                                ?>
-                            </select>
-
-                        </form>
-
-                        <?php if (defined('DB_SQLITE')) { ?>
-                            <br>
-                            <?php if (defined('DB_PDO') && DB_PDO == 'sqlite') { ?>
-                                <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning"><?php _e('Revert to MySQL DB'); ?></a>
-                            <?php } else { ?>
-                                <a href="?page=sqlite-db&action=switch" class="button button-primary button-warning">3. <?php _e('Switch to SQLite DB'); ?></a>
-                                <?php
-                            }
-                        }
-                    }
-                    ?>
-                </div>
-
-                <br>
-                <hr>
-                <?php
-                switch (DB_PDO) {
-                    case 'sqlite':
-                        $this->sqlite_info();
-                        break;
-                    case 'mysql':
-                    default:
-                        $this->mysql_info();
-                        break;
-                }
-
-                if (!empty($web_server)) {
-                    ?>
-                    <div class="card mt-4">
-                        <div class="card-header">
-                <?php _e('Web server'); ?>
-                        </div>
-                        <ul class="list-group list-group-flush">
-                <?php if (!empty($web_server)) { ?>
-                                {% if web_server.software is not null %}
-                                <li class="list-group-item">
-                                    {{ web_server.software }}
-                                </li>
-                                {% endif %}
-
-                                <li class="list-group-item">
-                    <?php _e('PHP extension'); ?>:
-                                    {% for extension in web_server.php_extensions %}
-                                    {{ extension }}
-                                    {{ show_php_docu('book.' ~ extension ~ '.php') }}
-                                    {% endfor %}
-                                </li>
-                                <li class="list-group-item">
-                                <?php _e('PHP version'); ?>: <?php echo phpversion(); ?>
-                                </li>
-                <?php } ?>
-                        </ul>
-                    </div>
-                    <?php
-                }
-                ?>
-                <hr>
-                <p>
-                    <?php _e('You don\'t have to set any special settings. In fact there are no other settings. You can write articles or pages and customize you WordPress in an ordinary way. You want to install your plugins? All right, go ahead. But some of them may be incompatible with this. Please read more information about this plugin and your SQLite database below.', $domain) ?>
-                </p>
-                <p><?php _e('Deactivation makes this documents and utilities disappear from the dashboard, but it doesn\'t affect the functionality of the SQLite Integration. when uninstalled, it will remove wp-content/uploads/patches directory (if exists) and wp-content/db.php file altogether.', $domain); ?></p>
-                <table class="widefat" cellspacing="0" id="menu">
-                    <thead>
-                    <th><?php _e('Title', $domain); ?></th>
-                    <th><?php _e('Contents', $domain); ?></th>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=doc"><?php _e('Documentation', $domain) ?></a></td>
-                            <td><?php _e('You can read documentation about this plugin and plugin compatibility.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=sys-info"><?php _e('System Info', $domain) ?></a></td>
-                            <td><?php _e('You can see database and system information.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td class="menu-title"><a href="<?php echo $this->show_parent(); ?>?page=setting-file"><?php _e('Miscellaneous', $domain) ?></a></td>
-                            <td><?php _e('You can see the error log and edit db.php file (if necessary) and optimize your database.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td><a href="<?php echo $this->show_parent(); ?>?page=patch"><?php _e('Patch Utility', $domain) ?></a></td>
-                            <td><?php _e('You can upload patch files and apply them to the incompatible plugins.', $domain) ?></td>
-                        </tr>
-                        <tr>
-                            <td><a href="<?php echo $this->show_parent(); ?>?page=maintenance"><?php _e('Maintenance', $domain); ?></a></td>
-                            <td><?php _e('You can check your database and fix it if needed.', $domain); ?></td>
-                        </tr>
-                        <tr>
-                            <td><a href="<?php echo $this->show_parent(); ?>?page=explorer"><?php _e('Explorer', $domain); ?></a></td>
-                            <td><?php _e('You can read, edit and execute Custom SQL on your DB.', $domain); ?></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <?php
-        }
-    }
-
-    /**
-     * Method to show Untility page.
+     * Method to show Utility page.
      *
      */
     function show_utils() {
@@ -774,194 +637,9 @@ class SQLiteIntegrationUtils {
         } elseif (!current_user_can('manage_options')) {
             die(__('You are not allowed to access this page!', $domain));
         }
-        if (isset($_GET['page']) && $_GET['page'] == 'sys-info') :
-            ?>
-            <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
-            <div class="wrap" id="sqlite-admin-wrap">
-                <h2><?php _e('System Information', $domain) ?></h2>
-                <h3><?php _e('PHP Informations', $domain) ?></h3>
-                <?php $info = $this->get_system_info(); ?>
-                <table class="widefat page fixed" cellspacing="0" id="sys-info">
-                    <thead>
-                        <tr>
-                            <th class="item"><?php _e('Items', $domain); ?></th>
-                            <th><?php _e('Description', $domain); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="item"><?php _e('WordPress Version', $domain); ?></td>
-                            <td><?php echo $info['WordPress']; ?></td>
-                        </tr>
-                        <tr>
-                            <td class="item"><?php _e('PHP Version', $domain); ?></td>
-                            <td><?php echo $info['PHP']; ?></td>
-                        </tr>
-                        <tr>
-                            <td class="item"><?php _e('PDO Support', $domain); ?></td>
-                            <td><?php $this->get_module_setting('PDO', 'PDO support'); ?></td>
-                        </tr>
-                        <tr>
-                            <td class="item"><?php _e('PDO Drivers', $domain); ?></td>
-                            <td><?php $this->get_module_setting('PDO', 'PDO drivers'); ?></td>
-                        </tr>
-                        <tr>
-                            <td class="item"><?php _e('PDO Driver for SQLite 3.x', $domain); ?></td>
-                            <td><?php $this->get_module_setting('pdo_sqlite', 'PDO Driver for SQLite 3.x'); ?></td>
-                        </tr>
-                        <tr>
-                            <td class="item"><?php _e('SQLite Library Version', $domain); ?></td>
-                            <td><?php $this->get_module_setting('pdo_sqlite', 'SQLite Library'); ?>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3><?php _e('Your Database Status', $domain) ?></h3>
-                <table class="widefat page fixed" cellspacing="0" id="status">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Items', $domain) ?></th>
-                            <th><?php _e('Status', $domain) ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php $status = $this->get_database_status(); ?>
-                        <tr>
-                            <td><?php _e('Database Size', $domain); ?></th>
-                            <td><?php echo $status['size']; ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php _e('Page Size', $domain); ?></td>
-                            <td><?php echo $status['pagesize']; ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php _e('Total Number of Pages', $domain); ?></td>
-                            <td><?php echo $status['page']; ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php _e('Unused Page', $domain) ?></td>
-                            <td><?php echo $status['unused']; ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php _e('Integrity Check', $domain); ?></td>
-                            <td><?php echo strtoupper($status['integrity']); ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php _e('Encoding', $domain); ?></th>
-                            <td><?php echo $status['encoding']; ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php _e('Collations', $domain); ?></th>
-                            <td>
-                                <?php
-                                $i = 0;
-                                foreach ($status['collations'] as $col) {
-                                    if ($i != 0)
-                                        echo '<br />';
-                                    echo ($i + 1) . '. ' . $col;
-                                    $i++;
-                                }
-                                ?>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><?php _e('Compile Options', $domain); ?></td>
-                            <td>
-                                <?php
-                                $i = 0;
-                                foreach ($status['options'] as $op) {
-                                    if ($i != 0)
-                                        echo '<br />';
-                                    echo ($i + 1) . '. ' . $op;
-                                    $i++;
-                                }
-                                ?>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3><?php _e('Database Tables and Indexes', $domain) ?></h3>
-                <p>
-                    <?php _e('Table names in brown are required by WordPress, and those in blue are created by some plugins. The table sqlite_sequence is not a WordPress table but a table required by SQLite to store the current autoincremented value of each table, which is displayed in the parenthesis after the table names. You can\'t manipulate the tables or indexes here. Please use SQLite utilities (e.g. SQLiteManager).', $domain) ?>
-                </p>
-                <table class="widefat page fixed" cellspacing="0" id="sqlite-table">
-                    <thead>
-                        <tr>
-                            <th data-sort='{"key":"tblName"}' class="tbl-name"><?php _e('Table Name', $domain) ?></th>
-                            <th data-sort='{"key":"which"}' class="tbl_owner"><?php _e('System/User', $domain) ?>
-                            <th class="tbl_index"><?php _e('Index ( Column )', $domain) ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        global $wpdb;
-                        $table_info = $this->get_tables_info();
-                        $table_seq = $this->get_sequence();
-                        $network_tables = array();
-                        if (is_multisite()) {
-                            $tmp_tables = $wpdb->tables('blog', false);
-                            $blogs = $wpdb->get_col("SELECT * FROM {$wpdb->prefix}blogs");
-                            if (count($blogs) > 1) {
-                                foreach ($blogs as $id) {
-                                    if ($id == 1)
-                                        continue;
-                                    foreach ($tmp_tables as $tmp_tbl) {
-                                        $network_tables[] = $wpdb->prefix . $id . '_' . $tmp_tbl;
-                                    }
-                                }
-                            }
-                        }
-                        foreach ($table_info as $tbl_name => $index) :
-                            ?>
-                            <?php
-                            if (in_array($tbl_name, $wpdb->tables('all', true)) || in_array($tbl_name, $network_tables) || $tbl_name == 'sqlite_sequence') {
-                                $which_table = 'system';
-                            } else {
-                                $which_table = 'user';
-                            }
-                            echo '<tr data-table=\'{"tblName":"' . $tbl_name . '","which":"' . $which_table . '"}\'>';
-                            if (array_key_exists($tbl_name, $table_seq))
-                                $tbl_name .= " ($table_seq[$tbl_name])";
-                            echo '<td class="' . $which_table . '">' . $tbl_name . '</td>';
-                            echo '<td class="' . $which_table . '">' . $which_table . ' table</td>';
-                            ?>
-                        <td class="<?php echo $which_table ?>"><?php
-                foreach ($index as $idx) {
-                    echo $idx . '<br />';
-                }
-                            ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <?php /*
-              <div class="wrap" id="sqlite-admin-side-wrap">
-              <h2><?php _e('Plugin Info', $domain)?></h2>
-              <p>
-              <?php _e('This table shows plugins you have installed and their compatibility.', $domain)?>
-              </p>
-              <table class="widefat page fixed" cellspacing="0" id="plugins-info">
-              <thead>
-              <tr>
-              <th data-sort='{"key":"name"}' class="installed-plugins"><?php _e('Installed Plugins', $domain)?></th>
-              <th data-sort='{"key":"active"}' class="active-plugins"><?php _e('Active/Inactive', $domain)?></th>
-              <th data-sort='{"key":"comp"}' class="compatible"><?php _e('Compatible', $domain)?></th>
-              </tr>
-              </thead>
-              <tbody>
-              <?php //$this->show_plugins_info();?>
-              </tbody>
-              </table>
-              <p>
-              <?php _e('"Checked*" with an asterisk is from the users\' information. I didn\'t check myself yet. If you found any malfunctioning, please let me know.', $domain);?>
-              </p>
-              </div>
-             */ ?>
-            <?php
-        endif;
+        if (isset($_GET['page']) && $_GET['page'] == 'sys-info') {
+            include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'pages' . DIRECTORY_SEPARATOR . $_GET['page'] . DIRECTORY_SEPARATOR . '.php';
+        }    
     }
 
     /**
@@ -1178,7 +856,9 @@ JS;
                     <?php echo '<textarea name="dbfile" id="dbfile" cols="70" rows="10">' . $db_contents . '</textarea><p>'; ?>
                     <?php printf('<input type="submit" name="sqlitewordpress_db_save" value="%s" onclick="return confirm(\'%s\')" class="button-primary">', __('Save', $domain), __('Are you sure to save this file?\n\nClick [Cancel] to stop, [OK] to continue.', $domain)); ?>
                     <?php echo '</p></form>'; ?>
-                <?php endif; ?>
+                <?php endif; 
+                /*
+                ?>
                 <h3><?php _e('Update db.php', $domain); ?></h3>
                 <p><?php _e('Replace the old db.php with the new one.', $domain); ?></p>
                 <form action="" method="post">
@@ -1189,6 +869,8 @@ JS;
                     ?>
                     <p><?php printf('<input type="submit" name="sqliteintegration_update_db_file" value="%s" onclick="return confirm(\'%s\')" class="button-primary">', __('Update', $domain), __('Are you sure to update this file?\n\nClick [Cancel] to stop, [OK] to continue.', $domain)); ?></p>
                 </form>
+                 * 
+                 */ ?>
             </div>
             <?php
         }
@@ -1204,7 +886,7 @@ JS;
             ?>
             <div class="card mt-4">
                 <div class="card-header">
-                    <h2><?php _e(DB_PDO); ?> - <small><?php _e('Database server'); ?></small></h2>
+                    <h2><?php _e(DATABASE_TYPE); ?> - <small><?php _e('Database server'); ?></small></h2>
                 </div>
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item">
@@ -1237,7 +919,7 @@ JS;
         ?>
         <div class="card mt-4">
             <div class="card-header">
-                <h2><?php _e(DB_PDO); ?> - <small><?php _e('Database server'); ?></small></h2>
+                <h2><?php _e(DATABASE_TYPE); ?> - <small><?php _e('Database server'); ?></small></h2>
             </div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item">

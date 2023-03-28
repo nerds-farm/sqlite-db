@@ -1,11 +1,12 @@
 <?php
+
 /**
  * Plugin Name: WP SQLite DB
  * Description: SQLite database driver drop-in. (based on SQLite Integration by Kojima Toshiyasu)
  * Author: Evan Mattson
  * Author URI: https://aaemnnost.tv
  * Plugin URI: https://github.com/aaemnnosttv/wp-sqlite-db
- * Version: 1.2.0
+ * Version: 1.3.1
  * Requires PHP: 5.6
  *
  * This file must be placed in wp-content/db.php.
@@ -14,14 +15,15 @@
  * This project is based on the original work of Kojima Toshiyasu and his SQLite Integration plugin.
  */
 
-namespace SQLite_DB {
+namespace WP_SQLite_DB {
 
     use DateTime;
     use DateInterval;
     use PDO;
     use PDOException;
+    use SQLite3;
 
-    if (! defined('ABSPATH')) {
+if (!defined('ABSPATH')) {
         exit;
     }
 
@@ -45,8 +47,7 @@ namespace SQLite_DB {
         return;
     }
 
-    function pdo_log_error($message, $data = null)
-    {
+    function pdo_log_error($message, $data = null) {
         if (strpos($_SERVER['SCRIPT_NAME'], 'wp-admin') !== false) {
             $admin_dir = '';
         } else {
@@ -76,14 +77,14 @@ HTML
         pdo_log_error('PHP version on this server is too old.', sprintf("Your server is running PHP version %d but this SQLite driver requires at least 5.4", phpversion()));
     }
 
-    if (! extension_loaded('pdo')) {
+    if (!extension_loaded('pdo')) {
         pdo_log_error('PHP PDO Extension is not loaded.',
-            'Your PHP installation appears to be missing the PDO extension which is required for this version of WordPress.');
+                'Your PHP installation appears to be missing the PDO extension which is required for this version of WordPress.');
     }
 
-    if (! extension_loaded('pdo_sqlite')) {
+    if (!extension_loaded('pdo_sqlite')) {
         pdo_log_error('PDO Driver for SQLite is missing.',
-            'Your PHP installation appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.');
+                'Your PHP installation appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.');
     }
 
     /**
@@ -93,7 +94,6 @@ HTML
      * define('DB_DIR', '/full_path_to_the_database_directory/');
      * define('DB_FILE', 'database_file_name');
      */
-
     /**
      * FQDBDIR is a directory where the sqlite database file is placed.
      * If DB_DIR is defined, it is used as FQDBDIR.
@@ -136,8 +136,8 @@ HTML
      * This automatically enables ref_to_pdo_obj to replace the function in the SQL statement
      * to the ones defined here.
      */
-    class PDOSQLiteUDFS
-    {
+    class PDOSQLiteUDFS {
+
         /**
          * The class constructor
          *
@@ -145,9 +145,8 @@ HTML
          *
          * @param PDO $pdo
          */
-        public function __construct($pdo)
-        {
-            if (! $pdo) {
+        public function __construct($pdo) {
+            if (!$pdo) {
                 wp_die('Database is not initialized.', 'Database Error');
             }
             foreach ($this->functions as $f => $t) {
@@ -214,8 +213,7 @@ HTML
          *
          * @return string representing the number of the month between 1 and 12.
          */
-        public function month($field)
-        {
+        public function month($field) {
             $t = strtotime($field);
 
             return date('n', $t);
@@ -228,8 +226,7 @@ HTML
          *
          * @return string representing the number of the year.
          */
-        public function year($field)
-        {
+        public function year($field) {
             $t = strtotime($field);
 
             return date('Y', $t);
@@ -242,8 +239,7 @@ HTML
          *
          * @return string representing the number of the day of the month from 1 and 31.
          */
-        public function day($field)
-        {
+        public function day($field) {
             $t = strtotime($field);
 
             return date('j', $t);
@@ -260,8 +256,7 @@ HTML
          *
          * @return number of unsigned integer
          */
-        public function unix_timestamp($field = null)
-        {
+        public function unix_timestamp($field = null) {
             return is_null($field) ? time() : strtotime($field);
         }
 
@@ -272,8 +267,7 @@ HTML
          *
          * @return number of unsigned integer
          */
-        public function second($field)
-        {
+        public function second($field) {
             $t = strtotime($field);
 
             return intval(date("s", $t));
@@ -286,8 +280,7 @@ HTML
          *
          * @return number of unsigned integer
          */
-        public function minute($field)
-        {
+        public function minute($field) {
             $t = strtotime($field);
 
             return intval(date("i", $t));
@@ -300,8 +293,7 @@ HTML
          *
          * @return number
          */
-        public function hour($time)
-        {
+        public function hour($time) {
             list($hours) = explode(":", $time);
 
             return intval($hours);
@@ -315,8 +307,7 @@ HTML
          *
          * @return string formatted as '0000-00-00 00:00:00'.
          */
-        public function from_unixtime($field, $format = null)
-        {
+        public function from_unixtime($field, $format = null) {
             //convert to ISO time
             $date = date("Y-m-d H:i:s", $field);
 
@@ -328,8 +319,7 @@ HTML
          *
          * @return string representing current time formatted as '0000-00-00 00:00:00'.
          */
-        public function now()
-        {
+        public function now() {
             return date("Y-m-d H:i:s");
         }
 
@@ -338,8 +328,7 @@ HTML
          *
          * @return string representing current time formatted as '0000-00-00'.
          */
-        public function curdate()
-        {
+        public function curdate() {
             return date("Y-m-d");
         }
 
@@ -350,8 +339,7 @@ HTML
          *
          * @return int unsigned integer for the length of the argument.
          */
-        public function char_length($field)
-        {
+        public function char_length($field) {
             return strlen($field);
         }
 
@@ -362,8 +350,7 @@ HTML
          *
          * @return string of the md5 hash value of the argument.
          */
-        public function md5($field)
-        {
+        public function md5($field) {
             return md5($field);
         }
 
@@ -379,8 +366,7 @@ HTML
          *
          * @return int
          */
-        public function rand()
-        {
+        public function rand() {
             return mt_rand(0, 1);
         }
 
@@ -396,8 +382,7 @@ HTML
          *
          * @return string
          */
-        public function substring($text, $pos, $len = null)
-        {
+        public function substring($text, $pos, $len = null) {
             return "substr($text, $pos, $len)";
         }
 
@@ -409,8 +394,7 @@ HTML
          *
          * @return string formatted according to $format
          */
-        public function dateformat($date, $format)
-        {
+        public function dateformat($date, $format) {
             $mysql_php_date_formats = [
                 '%a' => 'D',
                 '%b' => 'M',
@@ -463,8 +447,7 @@ HTML
          * @return string date formatted as '0000-00-00 00:00:00'.
          * @throws Exception
          */
-        public function date_add($date, $interval)
-        {
+        public function date_add($date, $interval) {
             $interval = $this->deriveInterval($interval);
             switch (strtolower($date)) {
                 case "curdate()":
@@ -499,8 +482,7 @@ HTML
          * @return string date formatted as '0000-00-00 00:00:00'.
          * @throws Exception
          */
-        public function date_sub($date, $interval)
-        {
+        public function date_sub($date, $interval) {
             $interval = $this->deriveInterval($interval);
             switch (strtolower($date)) {
                 case "curdate()":
@@ -531,12 +513,11 @@ HTML
          *
          * @return string representing the time to add or substract.
          */
-        private function deriveInterval($interval)
-        {
+        private function deriveInterval($interval) {
             $interval = trim(substr(trim($interval), 8));
             $parts = explode(' ', $interval);
             foreach ($parts as $part) {
-                if (! empty($part)) {
+                if (!empty($part)) {
                     $_parts[] = $part;
                 }
             }
@@ -618,8 +599,7 @@ HTML
          *
          * @return string formatted as '0000-00-00'.
          */
-        public function date($date)
-        {
+        public function date($date) {
             return date("Y-m-d", strtotime($date));
         }
 
@@ -632,8 +612,7 @@ HTML
          *
          * @return boolean
          */
-        public function isnull($field)
-        {
+        public function isnull($field) {
             return is_null($field);
         }
 
@@ -648,8 +627,7 @@ HTML
          *
          * @return unknown
          */
-        public function _if($expression, $true, $false)
-        {
+        public function _if($expression, $true, $false) {
             return ($expression == true) ? $true : $false;
         }
 
@@ -661,8 +639,7 @@ HTML
          *
          * @return integer 1 if matched, 0 if not matched.
          */
-        public function regexp($field, $pattern)
-        {
+        public function regexp($field, $pattern) {
             $pattern = str_replace('/', '\/', $pattern);
             $pattern = "/" . $pattern . "/i";
 
@@ -679,8 +656,7 @@ HTML
          *
          * @return NULL if the argument is null | string conatenated if the argument is given.
          */
-        public function concat()
-        {
+        public function concat() {
             $returnValue = "";
             $argsNum = func_num_args();
             $argsList = func_get_args();
@@ -705,8 +681,7 @@ HTML
          *
          * @return int unsigned integer
          */
-        public function field()
-        {
+        public function field() {
             global $wpdb;
             $numArgs = func_num_args();
             if ($numArgs < 2 or is_null(func_get_arg(0))) {
@@ -750,8 +725,7 @@ HTML
          *
          * @return double | NULL
          */
-        public function log()
-        {
+        public function log() {
             $numArgs = func_num_args();
             if ($numArgs == 1) {
                 $arg1 = func_get_arg(0);
@@ -774,8 +748,7 @@ HTML
          *
          * @return mixed
          */
-        public function least()
-        {
+        public function least() {
             $arg_list = func_get_args();
 
             return "min($arg_list)";
@@ -788,8 +761,7 @@ HTML
          *
          * @return mixed
          */
-        public function greatest()
-        {
+        public function greatest() {
             $arg_list = func_get_args();
 
             return "max($arg_list)";
@@ -805,8 +777,7 @@ HTML
          *
          * @return string
          */
-        public function get_lock($name, $timeout)
-        {
+        public function get_lock($name, $timeout) {
             return '1=1';
         }
 
@@ -819,8 +790,7 @@ HTML
          *
          * @return string
          */
-        public function release_lock($name)
-        {
+        public function release_lock($name) {
             return '1=1';
         }
 
@@ -834,8 +804,7 @@ HTML
          *
          * @return string SQLite compatible function name.
          */
-        public function ucase($string)
-        {
+        public function ucase($string) {
             return "upper($string)";
         }
 
@@ -850,8 +819,7 @@ HTML
          *
          * @return string SQLite compatible function name.
          */
-        public function lcase($string)
-        {
+        public function lcase($string) {
             return "lower($string)";
         }
 
@@ -864,8 +832,7 @@ HTML
          *
          * @return string
          */
-        public function inet_ntoa($num)
-        {
+        public function inet_ntoa($num) {
             return long2ip($num);
         }
 
@@ -878,8 +845,7 @@ HTML
          *
          * @return int long integer
          */
-        public function inet_aton($addr)
-        {
+        public function inet_aton($addr) {
             return absint(ip2long($addr));
         }
 
@@ -893,13 +859,12 @@ HTML
          *
          * @return string
          */
-        public function datediff($start, $end)
-        {
-			$start_date = new DateTime($start);
-			$end_date = new DateTime($end);
-			$interval = $end_date->diff($start_date, false);
+        public function datediff($start, $end) {
+            $start_date = new DateTime($start);
+            $end_date = new DateTime($end);
+            $interval = $end_date->diff($start_date, false);
 
-			return $interval->format('%r%a');
+            return $interval->format('%r%a');
         }
 
         /**
@@ -915,9 +880,8 @@ HTML
          *
          * @return integer
          */
-        public function locate($substr, $str, $pos = 0)
-        {
-            if (! extension_loaded('mbstring')) {
+        public function locate($substr, $str, $pos = 0) {
+            if (!extension_loaded('mbstring')) {
                 if (($val = strpos($str, $substr, $pos)) !== false) {
                     return $val + 1;
                 } else {
@@ -939,8 +903,7 @@ HTML
          *
          * @return string formatted GMT date 'dddd-mm-dd'
          */
-        public function utc_date()
-        {
+        public function utc_date() {
             return gmdate('Y-m-d', time());
         }
 
@@ -951,8 +914,7 @@ HTML
          *
          * @return string formatted GMT time '00:00:00'
          */
-        public function utc_time()
-        {
+        public function utc_time() {
             return gmdate('H:i:s', time());
         }
 
@@ -963,8 +925,7 @@ HTML
          *
          * @return string formatted GMT timestamp 'yyyy-mm-dd 00:00:00'
          */
-        public function utc_timestamp()
-        {
+        public function utc_timestamp() {
             return gmdate('Y-m-d H:i:s', time());
         }
 
@@ -978,12 +939,12 @@ HTML
          *
          * @return string representing the version number: major_version.minor_version
          */
-        public function version()
-        {
+        public function version() {
             //global $required_mysql_version;
             //return $required_mysql_version;
             return '5.5';
         }
+
     }
 
     /**
@@ -992,26 +953,29 @@ HTML
      * It accepts a request from wpdb class, initialize PDO instance,
      * execute SQL statement, and returns the results to WordPress.
      */
-    class PDOEngine extends PDO
-    {
+    class PDOEngine extends PDO {
+
         /**
          * Class variable to check if there is an error.
          *
          * @var boolean
          */
         public $is_error = false;
+
         /**
          * Class variable which is used for CALC_FOUND_ROW query.
          *
          * @var unsigned integer
          */
         public $found_rows_result = null;
+
         /**
          * Class variable used for query with ORDER BY FIELD()
          *
          * @var array of the object
          */
         public $pre_ordered_results = null;
+
         /**
          * Class variable to store the rewritten queries.
          *
@@ -1019,6 +983,7 @@ HTML
          * @access private
          */
         private $rewritten_query;
+
         /**
          * Class variable to have what kind of query to execute.
          *
@@ -1026,6 +991,7 @@ HTML
          * @access private
          */
         private $query_type;
+
         /**
          * Class variable to store the result of the query.
          *
@@ -1033,6 +999,7 @@ HTML
          * @access private
          */
         private $results = null;
+
         /**
          * Class variable to store the results of the query.
          *
@@ -1042,6 +1009,7 @@ HTML
          * @access private
          */
         private $_results = null;
+
         /**
          * Class variable to reference to the PDO instance.
          *
@@ -1049,12 +1017,14 @@ HTML
          * @access private
          */
         private $pdo;
+
         /**
          * Class variable to store the query string prepared to execute.
          *
          * @var string|array
          */
         private $prepared_query;
+
         /**
          * Class variable to store the values in the query string.
          *
@@ -1062,6 +1032,7 @@ HTML
          * @access private
          */
         private $extracted_variables = [];
+
         /**
          * Class variable to store the error messages.
          *
@@ -1069,6 +1040,7 @@ HTML
          * @access private
          */
         private $error_messages = [];
+
         /**
          * Class variable to store the file name and function to cause error.
          *
@@ -1076,12 +1048,14 @@ HTML
          * @access private
          */
         private $errors;
+
         /**
          * Class variable to store the query strings.
          *
          * @var array
          */
         public $queries = [];
+
         /**
          * Class variable to store the affected row id.
          *
@@ -1089,24 +1063,28 @@ HTML
          * @access private
          */
         private $last_insert_id;
+
         /**
          * Class variable to store the number of rows affected.
          *
          * @var unsigned integer
          */
         private $affected_rows;
+
         /**
          * Class variable to store the queried column info.
          *
          * @var array
          */
         private $column_data;
+
         /**
          * Variable to emulate MySQL affected row.
          *
          * @var integer
          */
         private $num_rows;
+
         /**
          * Return value from query().
          *
@@ -1115,6 +1093,7 @@ HTML
          * @var mixed
          */
         private $return_value;
+
         /**
          * Variable to determine which insert query to use.
          *
@@ -1125,11 +1104,13 @@ HTML
          * @var boolean
          */
         private $can_insert_multiple_rows = false;
+
         /**
          *
          * @var integer
          */
         private $param_num;
+
         /**
          * Varible to check if there is an active transaction.
          * @var boolean
@@ -1148,10 +1129,9 @@ HTML
          *
          * @param none
          */
-        function __construct()
-        {
+        function __construct() {
             register_shutdown_function([$this, '__destruct']);
-            if (! is_file(FQDB)) {
+            if (!is_file(FQDB)) {
                 $this->prepare_directory();
             }
             $dsn = 'sqlite:' . FQDB;
@@ -1176,8 +1156,8 @@ HTML
                 } while ($locked);
                 if ($status > 0) {
                     $message = 'Database initialization error!<br />' .
-                        'Code: ' . $status .
-                        (isset($err_message) ? '<br />Error Message: ' . $err_message : '');
+                            'Code: ' . $status .
+                            (isset($err_message) ? '<br />Error Message: ' . $err_message : '');
                     $this->set_error(__LINE__, __FILE__, $message);
 
                     return false;
@@ -1196,13 +1176,12 @@ HTML
          *
          * @return boolean
          */
-        function __destruct()
-        {
+        function __destruct() {
             if (defined('SQLITE_MEM_DEBUG') && SQLITE_MEM_DEBUG) {
                 $max = ini_get('memory_limit');
                 if (is_null($max)) {
                     $message = sprintf("[%s] Memory_limit is not set in php.ini file.",
-                        date('Y-m-d H:i:s', $_SERVER['REQUEST_TIME']));
+                            date('Y-m-d H:i:s', $_SERVER['REQUEST_TIME']));
                     file_put_contents(FQDBDIR . 'mem_debug.txt', $message, FILE_APPEND);
 
                     return true;
@@ -1214,7 +1193,7 @@ HTML
                 $used = round((int) $peak / (int) $max * 100, 2);
                 if ($used > 90) {
                     $message = sprintf("[%s] Memory peak usage warning: %s %% used. (max: %sM, now: %sM)\n",
-                        date('Y-m-d H:i:s', $_SERVER['REQUEST_TIME']), $used, $max, $peak);
+                            date('Y-m-d H:i:s', $_SERVER['REQUEST_TIME']), $used, $max, $peak);
                     file_put_contents(FQDBDIR . 'mem_debug.txt', $message, FILE_APPEND);
                 }
             }
@@ -1232,8 +1211,7 @@ HTML
          * Some developers use WP_INSTALLING constant for other purposes, if so, this
          * function will do no harms.
          */
-        private function init()
-        {
+        private function init() {
             if (version_compare($this->get_sqlite_version(), '3.7.11', '>=')) {
                 $this->can_insert_multiple_rows = true;
             }
@@ -1248,25 +1226,24 @@ HTML
          *
          * It is executed only once when the installation begins.
          */
-        private function prepare_directory()
-        {
+        private function prepare_directory() {
             global $wpdb;
             $u = umask(0000);
-            if (! is_dir(FQDBDIR)) {
-                if (! @mkdir(FQDBDIR, 0704, true)) {
+            if (!is_dir(FQDBDIR)) {
+                if (!@mkdir(FQDBDIR, 0704, true)) {
                     umask($u);
                     $message = 'Unable to create the required directory! Please check your server settings.';
                     wp_die($message, 'Error!');
                 }
             }
-            if (! is_writable(FQDBDIR)) {
+            if (!is_writable(FQDBDIR)) {
                 umask($u);
                 $message = 'Unable to create a file in the directory! Please check your server settings.';
                 wp_die($message, 'Error!');
             }
-            if (! is_file(FQDBDIR . '.htaccess')) {
+            if (!is_file(FQDBDIR . '.htaccess')) {
                 $fh = fopen(FQDBDIR . '.htaccess', "w");
-                if (! $fh) {
+                if (!$fh) {
                     umask($u);
                     $message = 'Unable to create a file in the directory! Please check your server settings.';
                     echo $message;
@@ -1276,9 +1253,9 @@ HTML
                 fwrite($fh, 'DENY FROM ALL');
                 fclose($fh);
             }
-            if (! is_file(FQDBDIR . 'index.php')) {
+            if (!is_file(FQDBDIR . 'index.php')) {
                 $fh = fopen(FQDBDIR . 'index.php', "w");
-                if (! $fh) {
+                if (!$fh) {
                     umask($u);
                     $message = 'Unable to create a file in the directory! Please check your server settings.';
                     echo $message;
@@ -1321,15 +1298,15 @@ HTML
          * @return mixed according to the query type
          * @see PDO::query()
          */
-        public function query($statement, $mode = PDO::ATTR_DEFAULT_FETCH_MODE, ...$fetch_mode_args)
-        {
+        #[\ReturnTypeWillChange]
+        public function query($statement, $mode = PDO::ATTR_DEFAULT_FETCH_MODE, ...$fetch_mode_args) {
             $this->flush();
 
             $this->queries[] = "Raw query:\n$statement";
             $res = $this->determine_query_type($statement);
-            if (! $res && defined('PDO_DEBUG') && PDO_DEBUG) {
+            if (!$res && defined('PDO_DEBUG') && PDO_DEBUG) {
                 $bailoutString = sprintf(__("<h1>Unknown query type</h1><p>Sorry, we cannot determine the type of query that is requested.</p><p>The query is %s</p>",
-                    'sqlite-integration'), $statement);
+                                'sqlite-integration'), $statement);
                 $this->set_error(__LINE__, __FUNCTION__, $bailoutString);
             }
             switch (strtolower($this->query_type)) {
@@ -1339,7 +1316,7 @@ HTML
                 case 'foundrows':
                     $_column = ['FOUND_ROWS()' => ''];
                     $column = [];
-                    if (! is_null($this->found_rows_result)) {
+                    if (!is_null($this->found_rows_result)) {
                         $this->num_rows = $this->found_rows_result;
                         $_column['FOUND_ROWS()'] = $this->num_rows;
                         //foreach ($this->found_rows_result[0] as $key => $value) {
@@ -1385,7 +1362,7 @@ HTML
                 default:
                     $engine = $this->prepare_engine($this->query_type);
                     $this->rewritten_query = $engine->rewrite_query($statement, $this->query_type);
-                    if (! is_null($this->pre_ordered_results)) {
+                    if (!is_null($this->pre_ordered_results)) {
                         $this->results = $this->pre_ordered_results;
                         $this->num_rows = $this->return_value = count($this->results);
                         $this->pre_ordered_results = null;
@@ -1395,7 +1372,7 @@ HTML
                     $this->extract_variables();
                     $prepared_query = $this->prepare_query();
                     $this->execute_query($prepared_query);
-                    if (! $this->is_error) {
+                    if (!$this->is_error) {
                         $this->process_results($engine);
                     } else {
                         // Error
@@ -1412,16 +1389,14 @@ HTML
         /**
          * Method to return inserted row id.
          */
-        public function get_insert_id()
-        {
+        public function get_insert_id() {
             return $this->last_insert_id;
         }
 
         /**
          * Method to return the number of rows affected.
          */
-        public function get_affected_rows()
-        {
+        public function get_affected_rows() {
             return $this->affected_rows;
         }
 
@@ -1433,9 +1408,8 @@ HTML
          *
          * @return array of the object
          */
-        public function get_columns()
-        {
-            if (! empty($this->results)) {
+        public function get_columns() {
+            if (!empty($this->results)) {
                 $primary_key = [
                     'meta_id',
                     'comment_ID',
@@ -1454,15 +1428,15 @@ HTML
                 $data = [
                     'name' => '', // column name
                     'table' => '', // table name
-                    'max_length' => 0,  // max length of the column
-                    'not_null' => 1,  // 1 if not null
-                    'primary_key' => 0,  // 1 if column has primary key
-                    'unique_key' => 0,  // 1 if column has unique key
-                    'multiple_key' => 0,  // 1 if column doesn't have unique key
-                    'numeric' => 0,  // 1 if column has numeric value
-                    'blob' => 0,  // 1 if column is blob
+                    'max_length' => 0, // max length of the column
+                    'not_null' => 1, // 1 if not null
+                    'primary_key' => 0, // 1 if column has primary key
+                    'unique_key' => 0, // 1 if column has unique key
+                    'multiple_key' => 0, // 1 if column doesn't have unique key
+                    'numeric' => 0, // 1 if column has numeric value
+                    'blob' => 0, // 1 if column is blob
                     'type' => '', // type of the column
-                    'unsigned' => 0,  // 1 if column is unsigned integer
+                    'unsigned' => 0, // 1 if column is unsigned integer
                     'zerofill' => 0   // 1 if column is zero-filled
                 ];
                 if (preg_match("/\s*FROM\s*(.*)?\s*/i", $this->rewritten_query, $match)) {
@@ -1499,16 +1473,14 @@ HTML
          *
          * @return mixed
          */
-        public function get_query_results()
-        {
+        public function get_query_results() {
             return $this->results;
         }
 
         /**
          * Method to return the number of rows from the queried result.
          */
-        public function get_num_rows()
-        {
+        public function get_num_rows() {
             return $this->num_rows;
         }
 
@@ -1517,8 +1489,7 @@ HTML
          *
          * @return mixed
          */
-        public function get_return_value()
-        {
+        public function get_return_value() {
             return $this->return_value;
         }
 
@@ -1527,8 +1498,7 @@ HTML
          *
          * @return string
          */
-        public function get_error_message()
-        {
+        public function get_error_message() {
             if (count($this->error_messages) === 0) {
                 $this->is_error = false;
                 $this->error_messages = [];
@@ -1555,7 +1525,6 @@ HTML
             ob_end_clean();
 
             return $output;
-
         }
 
         /**
@@ -1563,8 +1532,7 @@ HTML
          *
          * @return string
          */
-        private function get_debug_info()
-        {
+        private function get_debug_info() {
             $output = '';
             foreach ($this->queries as $q) {
                 $output .= $q . "\n";
@@ -1576,8 +1544,7 @@ HTML
         /**
          * Method to clear previous data.
          */
-        private function flush()
-        {
+        private function flush() {
             $this->rewritten_query = '';
             $this->query_type = '';
             $this->results = null;
@@ -1604,8 +1571,7 @@ HTML
          *
          * @return object reference to apropreate driver
          */
-        private function prepare_engine($query_type = null)
-        {
+        private function prepare_engine($query_type = null) {
             if (stripos($query_type, 'create') !== false) {
                 $engine = new CreateQuery();
             } elseif (stripos($query_type, 'alter') !== false) {
@@ -1622,8 +1588,7 @@ HTML
          *
          * @return PDOStatement
          */
-        private function prepare_query()
-        {
+        private function prepare_query() {
             $this->queries[] = "Prepare:\n" . $this->prepared_query;
             $reason = 0;
             $message = '';
@@ -1656,11 +1621,10 @@ HTML
          *
          * @return boolean
          */
-        private function execute_query($statement)
-        {
+        private function execute_query($statement) {
             $reason = 0;
             $message = '';
-            if (! is_object($statement)) {
+            if (!is_object($statement)) {
                 return false;
             }
             if (count($this->extracted_variables) > 0) {
@@ -1760,8 +1724,7 @@ HTML
          *
          * If original SQL statement is CREATE query, this function does nothing.
          */
-        private function extract_variables()
-        {
+        private function extract_variables() {
             if ($this->query_type == 'create') {
                 $this->prepared_query = $this->rewritten_query;
 
@@ -1774,7 +1737,7 @@ HTML
             // if user's setting is more than default * 10, make PHP do the job.
             if ($limit > 10000000) {
                 $query = preg_replace_callback($pattern, [$this, 'replace_variables_with_placeholders'],
-                    $this->rewritten_query);
+                        $this->rewritten_query);
             } else {
                 do {
                     if ($limit > 10000000) {
@@ -1783,7 +1746,7 @@ HTML
                     } else {
                         ini_set('pcre.backtrack_limit', $limit);
                         $query = preg_replace_callback($pattern, [$this, 'replace_variables_with_placeholders'],
-                            $this->rewritten_query);
+                                $this->rewritten_query);
                     }
                     $limit = $limit * 10;
                 } while (is_null($query));
@@ -1805,8 +1768,7 @@ HTML
          *
          * @return string
          */
-        private function replace_variables_with_placeholders($matches)
-        {
+        private function replace_variables_with_placeholders($matches) {
             //remove the wordpress escaping mechanism
             $param = stripslashes($matches[0]);
 
@@ -1815,7 +1777,7 @@ HTML
 
             //remove the quotes at the end and the beginning
             if (in_array($param[strlen($param) - 1], ["'", '"'])) {
-                $param = substr($param, 0, -1);//end
+                $param = substr($param, 0, -1); //end
             }
             if (in_array($param[0], ["'", '"'])) {
                 $param = substr($param, 1); //start
@@ -1838,12 +1800,11 @@ HTML
          *
          * @return boolean|string
          */
-        private function determine_query_type($query)
-        {
+        private function determine_query_type($query) {
             $result = preg_match('/^\\s*(SET|EXPLAIN|PRAGMA|SELECT\\s*FOUND_ROWS|SELECT|INSERT|UPDATE|REPLACE|DELETE|ALTER|CREATE|DROP\\s*INDEX|DROP|SHOW\\s*\\w+\\s*\\w+\\s*|DESCRIBE|DESC|TRUNCATE|OPTIMIZE|CHECK|ANALYZE)/i',
-                $query, $match);
+                    $query, $match);
 
-            if (! $result) {
+            if (!$result) {
                 return false;
             }
             $this->query_type = strtolower($match[1]);
@@ -1854,17 +1815,17 @@ HTML
                 if (stripos($this->query_type, 'show table status') !== false) {
                     $this->query_type = 'showstatus';
                 } elseif (stripos($this->query_type, 'show tables') !== false || stripos($this->query_type,
-                        'show full tables') !== false) {
+                                'show full tables') !== false) {
                     $this->query_type = 'show';
                 } elseif (stripos($this->query_type, 'show columns') !== false || stripos($this->query_type,
-                        'show fields') !== false || stripos($this->query_type, 'show full columns') !== false) {
+                                'show fields') !== false || stripos($this->query_type, 'show full columns') !== false) {
                     $this->query_type = 'showcolumns';
                 } elseif (stripos($this->query_type, 'show index') !== false || stripos($this->query_type,
-                        'show indexes') !== false || stripos($this->query_type, 'show keys') !== false) {
+                                'show indexes') !== false || stripos($this->query_type, 'show keys') !== false) {
                     $this->query_type = 'showindex';
                 } elseif (stripos($this->query_type, 'show variables') !== false || stripos($this->query_type,
-                        'show global variables') !== false || stripos($this->query_type,
-                        'show session variables') !== false) {
+                                'show global variables') !== false || stripos($this->query_type,
+                                'show session variables') !== false) {
                     $this->query_type = 'show_variables';
                 } else {
                     return false;
@@ -1885,8 +1846,7 @@ HTML
          *
          * @param string $query
          */
-        private function execute_insert_query_new($query)
-        {
+        private function execute_insert_query_new($query) {
             $engine = $this->prepare_engine($this->query_type);
             $this->rewritten_query = $engine->rewrite_query($query, $this->query_type);
             $this->queries[] = "Rewritten:\n" . $this->rewritten_query;
@@ -1903,8 +1863,7 @@ HTML
          *
          * @param string $query
          */
-        private function execute_insert_query($query)
-        {
+        private function execute_insert_query($query) {
             global $wpdb;
             $multi_insert = false;
             $statement = null;
@@ -1963,8 +1922,7 @@ HTML
          *
          * @return array
          */
-        private function parse_multiple_inserts($values)
-        {
+        private function parse_multiple_inserts($values) {
             $tokens = preg_split("/(''|(?<!\\\\)'|(?<!\()\),(?=\s*\())/s", $values, -1, PREG_SPLIT_DELIM_CAPTURE);
             $exploded_parts = [];
             $part = '';
@@ -1972,7 +1930,7 @@ HTML
             foreach ($tokens as $token) {
                 switch ($token) {
                     case "),":
-                        if (! $literal) {
+                        if (!$literal) {
                             $exploded_parts[] = $part;
                             $part = '';
                         } else {
@@ -1992,7 +1950,7 @@ HTML
                         break;
                 }
             }
-            if (! empty($part)) {
+            if (!empty($part)) {
                 $exploded_parts[] = $part;
             }
 
@@ -2006,8 +1964,7 @@ HTML
          *
          * @return boolean
          */
-        private function execute_create_query($query)
-        {
+        private function execute_create_query($query) {
             $engine = $this->prepare_engine($this->query_type);
             $rewritten_query = $engine->rewrite_query($query);
             $reason = 0;
@@ -2050,8 +2007,7 @@ HTML
          *
          * @return boolean
          */
-        private function execute_alter_query($query)
-        {
+        private function execute_alter_query($query) {
             $engine = $this->prepare_engine($this->query_type);
             $reason = 0;
             $message = '';
@@ -2111,8 +2067,7 @@ HTML
          *
          * @return bool
          */
-        private function show_variables_workaround($query)
-        {
+        private function show_variables_workaround($query) {
             $dummy_data = ['Variable_name' => '', 'Value' => null];
             $pattern = '/SHOW\\s*VARIABLES\\s*LIKE\\s*(.*)?$/im';
             if (preg_match($pattern, $query, $match)) {
@@ -2142,8 +2097,7 @@ HTML
          *
          * @return bool
          */
-        private function show_status_workaround($query)
-        {
+        private function show_status_workaround($query) {
             $pattern = '/^SHOW\\s*TABLE\\s*STATUS\\s*LIKE\\s*(.*?)$/im';
             if (preg_match($pattern, $query, $match)) {
                 $table_name = str_replace("'", '', $match[1]);
@@ -2183,8 +2137,7 @@ HTML
          *
          * @param string $engine
          */
-        private function process_results($engine)
-        {
+        private function process_results($engine) {
             if (in_array($this->query_type, ['describe', 'desc', 'showcolumns'])) {
                 $this->convert_to_columns_object();
             } elseif ('showindex' === $this->query_type) {
@@ -2208,8 +2161,7 @@ HTML
          *
          * @return boolean
          */
-        private function set_error($line, $function, $message)
-        {
+        private function set_error($line, $function, $message) {
             global $wpdb;
             $this->errors[] = ["line" => $line, "function" => $function];
             $this->error_messages[] = $message;
@@ -2217,7 +2169,7 @@ HTML
             if ($wpdb->suppress_errors) {
                 return false;
             }
-            if (! $wpdb->show_errors) {
+            if (!$wpdb->show_errors) {
                 return false;
             }
             file_put_contents(FQDBDIR . 'debug.txt', "Line $line, Function: $function, Message: $message \n", FILE_APPEND);
@@ -2231,8 +2183,7 @@ HTML
          *
          * @access private
          */
-        private function convert_to_object()
-        {
+        private function convert_to_object() {
             $_results = [];
             if (count($this->results) === 0) {
                 echo $this->get_error_message();
@@ -2252,10 +2203,9 @@ HTML
          *
          * @access private
          */
-        private function convert_to_columns_object()
-        {
+        private function convert_to_columns_object() {
             $_results = [];
-            $_columns = [ //Field names MySQL SHOW COLUMNS returns
+            $_columns = [//Field names MySQL SHOW COLUMNS returns
                 'Field' => "",
                 'Type' => "",
                 'Null' => "",
@@ -2286,28 +2236,27 @@ HTML
          *
          * @access private
          */
-        private function convert_to_index_object()
-        {
+        private function convert_to_index_object() {
             $_results = [];
             $_columns = [
                 'Table' => "",
-                'Non_unique' => "",// unique -> 0, not unique -> 1
-                'Key_name' => "",// the name of the index
-                'Seq_in_index' => "",// column sequence number in the index. begins at 1
+                'Non_unique' => "", // unique -> 0, not unique -> 1
+                'Key_name' => "", // the name of the index
+                'Seq_in_index' => "", // column sequence number in the index. begins at 1
                 'Column_name' => "",
-                'Collation' => "",//A(scend) or NULL
+                'Collation' => "", //A(scend) or NULL
                 'Cardinality' => "",
-                'Sub_part' => "",// set to NULL
-                'Packed' => "",// How to pack key or else NULL
-                'Null' => "",// If column contains null, YES. If not, NO.
-                'Index_type' => "",// BTREE, FULLTEXT, HASH, RTREE
+                'Sub_part' => "", // set to NULL
+                'Packed' => "", // How to pack key or else NULL
+                'Null' => "", // If column contains null, YES. If not, NO.
+                'Index_type' => "", // BTREE, FULLTEXT, HASH, RTREE
                 'Comment' => "",
             ];
             if (count($this->_results) == 0) {
                 echo $this->get_error_message();
             } else {
                 foreach ($this->_results as $row) {
-                    if ($row->type == 'table' && ! stripos($row->sql, 'primary')) {
+                    if ($row->type == 'table' && !stripos($row->sql, 'primary')) {
                         continue;
                     }
                     if ($row->type == 'index' && stripos($row->name, 'sqlite_autoindex') !== false) {
@@ -2361,7 +2310,7 @@ HTML
                     $value = preg_replace("/[\';]/", '', $value);
                     $value = trim($value);
                     foreach ($_results as $result) {
-                        if (! empty($result->$key) && is_scalar($result->$key) && stripos($value, $result->$key) !== false) {
+                        if (!empty($result->$key) && is_scalar($result->$key) && stripos($value, $result->$key) !== false) {
                             unset($_results);
                             $_results[] = $result;
                             break;
@@ -2377,8 +2326,7 @@ HTML
          *
          * @access private
          */
-        private function convert_result_check_or_analyze()
-        {
+        private function convert_result_check_or_analyze() {
             $results = [];
             if ($this->query_type == 'check') {
                 $_columns = [
@@ -2407,8 +2355,7 @@ HTML
          * @return version number string or 0
          * @access private
          */
-        private function get_sqlite_version()
-        {
+        private function get_sqlite_version() {
             try {
                 $statement = $this->pdo->prepare('SELECT sqlite_version()');
                 $statement->execute();
@@ -2426,15 +2373,15 @@ HTML
          * @see PDO::beginTransaction()
          * @return boolean
          */
-        public function beginTransaction()
-        {
+        #[\ReturnTypeWillChange]
+        public function beginTransaction() {
             if ($this->has_active_transaction) {
                 return false;
-            } else {
-                $this->has_active_transaction = $this->pdo->beginTransaction();
-
-                return $this->has_active_transaction;
             }
+
+            $this->has_active_transaction = $this->pdo->beginTransaction();
+
+            return $this->has_active_transaction;
         }
 
         /**
@@ -2442,10 +2389,12 @@ HTML
          *
          * @see PDO::commit()
          */
-        public function commit()
-        {
-            $this->pdo->commit();
+        #[\ReturnTypeWillChange]
+        public function commit() {
+            $isSuccess = $this->pdo->commit();
             $this->has_active_transaction = false;
+
+            return $isSuccess;
         }
 
         /**
@@ -2453,11 +2402,14 @@ HTML
          *
          * @see PDO::rollBack()
          */
-        public function rollBack()
-        {
-            $this->pdo->rollBack();
+        #[\ReturnTypeWillChange]
+        public function rollBack() {
+            $isSuccess = $this->pdo->rollBack();
             $this->has_active_transaction = false;
+
+            return $isSuccess;
         }
+
     }
 
     /**
@@ -2465,25 +2417,26 @@ HTML
      *
      * @author kjm
      */
-    class ObjectArray
-    {
-        function __construct($data = null, &$node = null)
-        {
+    #[\AllowDynamicProperties]
+    class ObjectArray {
+
+        function __construct($data = null, &$node = null) {
             foreach ($data as $key => $value) {
                 if (is_array($value)) {
-                    if (! $node) {
-                        $node =& $this;
+                    if (!$node) {
+                        $node = & $this;
                     }
-                    $node->$key = new stdClass();
+                    $node->$key = new \stdClass();
                     self::__construct($value, $node->$key);
                 } else {
-                    if (! $node) {
-                        $node =& $this;
+                    if (!$node) {
+                        $node = & $this;
                     }
                     $node->$key = $value;
                 }
             }
         }
+
     }
 
     /**
@@ -2491,8 +2444,8 @@ HTML
      *
      * It also rewrites some methods that use mysql specific functions.
      */
-    class wpsqlitedb extends \wpdb
-    {
+    class wpsqlitedb extends \wpdb {
+
         /**
          * Database Handle
          * @var PDOEngine
@@ -2504,8 +2457,7 @@ HTML
          *
          * Unlike wpdb, no credentials are needed.
          */
-        public function __construct()
-        {
+        public function __construct() {
             parent::__construct('', '', '', '');
         }
 
@@ -2520,8 +2472,8 @@ HTML
          * @param string $charset Optional. The character set. Default null.
          * @param string $collate Optional. The collation. Default null.
          */
-        public function set_charset($dbh, $charset = null, $collate = null)
-        {
+        public function set_charset($dbh, $charset = null, $collate = null) {
+            
         }
 
         /**
@@ -2531,8 +2483,8 @@ HTML
          *
          * @param array $modes Optional. A list of SQL modes to set.
          */
-        public function set_sql_mode($modes = [])
-        {
+        public function set_sql_mode($modes = []) {
+            
         }
 
         /**
@@ -2545,8 +2497,7 @@ HTML
          * @param string $db MySQL database name
          * @param resource|null $dbh Optional link identifier.
          */
-        public function select($db, $dbh = null)
-        {
+        public function select($db, $dbh = null) {
             $this->ready = true;
         }
 
@@ -2561,8 +2512,7 @@ HTML
          *
          * @return string escaped
          */
-        function _real_escape($string)
-        {
+        function _real_escape($string) {
             return addslashes($string);
         }
 
@@ -2579,8 +2529,7 @@ HTML
          * @return string Text in the form of a LIKE phrase. The output is not SQL safe. Call $wpdb::prepare()
          *                or real_escape next.
          */
-        public function esc_like($text)
-        {
+        public function esc_like($text) {
             return $text;
         }
 
@@ -2597,13 +2546,12 @@ HTML
          *
          * @return bool False if the showing of errors is disabled.
          */
-        public function print_error($str = '')
-        {
+        public function print_error($str = '') {
             global $EZSQL_ERROR;
 
-            if (! $str) {
+            if (!$str) {
                 $err = $this->dbh->get_error_message() ? $this->dbh->get_error_message() : '';
-                if (! empty($err)) {
+                if (!empty($err)) {
                     $str = $err[2];
                 } else {
                     $str = '';
@@ -2619,14 +2567,14 @@ HTML
 
             if ($caller = $this->get_caller()) {
                 $error_str = sprintf(__('WordPress database error %1$s for query %2$s made by %3$s'), $str,
-                    $this->last_query, $caller);
+                        $this->last_query, $caller);
             } else {
                 $error_str = sprintf(__('WordPress database error %1$s for query %2$s'), $str, $this->last_query);
             }
 
             error_log($error_str);
 
-            if (! $this->show_errors) {
+            if (!$this->show_errors) {
                 return false;
             }
 
@@ -2657,8 +2605,7 @@ HTML
          *
          * @see wpdb::flush
          */
-        public function flush()
-        {
+        public function flush() {
             $this->last_result = [];
             $this->col_info = null;
             $this->last_query = null;
@@ -2676,8 +2623,7 @@ HTML
          *
          * @param bool $allow_bail
          */
-        public function db_connect($allow_bail = true)
-        {
+        public function db_connect($allow_bail = true) {
             $this->init_charset();
             $this->dbh = new PDOEngine();
             $this->ready = true;
@@ -2690,8 +2636,7 @@ HTML
          *
          * @return bool
          */
-        public function check_connection($allow_bail = true)
-        {
+        public function check_connection($allow_bail = true) {
             return true;
         }
 
@@ -2707,9 +2652,8 @@ HTML
          *
          * @return int|false Number of rows affected/selected or false on error
          */
-        public function query($query)
-        {
-            if (! $this->ready) {
+        public function query($query) {
+            if (!$this->ready) {
                 return false;
             }
 
@@ -2769,8 +2713,7 @@ HTML
          * @see    wpdb::load_col_info()
          * @access protected
          */
-        protected function load_col_info()
-        {
+        protected function load_col_info() {
             if ($this->col_info) {
                 return;
             }
@@ -2791,8 +2734,7 @@ HTML
          *
          * @return int|false Whether the database feature is supported, false otherwise.
          */
-        public function has_cap($db_cap)
-        {
+        public function has_cap($db_cap) {
             switch (strtolower($db_cap)) {
                 case 'collation':
                 case 'group_concat':
@@ -2814,19 +2756,27 @@ HTML
          *
          * @see wpdb::db_version()
          */
-        public function db_version()
-        {
+        public function db_version() {
+            // WordPress currently requires this to be 5.0 or greater.
             return '5.5';
         }
-    }
 
+        /**
+         * Retrieves full database server information.
+         *
+         * @return string|false Server info on success, false on failure.
+         */
+        public function db_server_info() {
+            return SQLite3::version()['versionString'] . '-SQLite3';
+        }
+
+    }
 
     /**
      * This class is for rewriting various query string except CREATE and ALTER.
      *
      */
-    class PDOSQLiteDriver
-    {
+    class PDOSQLiteDriver {
 
         /**
          * Variable to indicate the query types.
@@ -2834,42 +2784,49 @@ HTML
          * @var string $query_type
          */
         public $query_type = '';
+
         /**
          * Variable to store query string.
          *
          * @var string
          */
         public $_query = '';
+
         /**
          * Variable to check if rewriting CALC_FOUND_ROWS is needed.
          *
          * @var boolean
          */
         private $rewrite_calc_found = false;
+
         /**
          * Variable to check if rewriting ON DUPLICATE KEY UPDATE is needed.
          *
          * @var boolean
          */
         private $rewrite_duplicate_key = false;
+
         /**
          * Variable to check if rewriting index hints is needed.
          *
          * @var boolean
          */
         private $rewrite_index_hint = false;
+
         /**
          * Variable to check if rewriting BETWEEN is needed.
          *
          * @var boolean
          */
         private $rewrite_between = false;
+
         /**
          * Variable to check how many times rewriting BETWEEN is needed.
          *
          * @var integer
          */
         private $num_of_rewrite_between = 0;
+
         /**
          * Variable to check order by field() with column data.
          *
@@ -2885,8 +2842,7 @@ HTML
          *
          * @return string
          */
-        public function rewrite_query($query, $query_type)
-        {
+        public function rewrite_query($query, $query_type) {
             $this->query_type = $query_type;
             $this->_query = $query;
             $this->parse_query();
@@ -2978,8 +2934,7 @@ HTML
          *
          * @access private
          */
-        private function parse_query()
-        {
+        private function parse_query() {
             $tokens = preg_split("/(\\\'|''|')/s", $this->_query, -1, PREG_SPLIT_DELIM_CAPTURE);
             $literal = false;
             $query_string = '';
@@ -3035,15 +2990,14 @@ HTML
          *
          * @access private
          */
-        private function handle_show_query()
-        {
+        private function handle_show_query() {
             $this->_query = str_ireplace(' FULL', '', $this->_query);
             $table_name = '';
             $pattern = '/^\\s*SHOW\\s*TABLES\\s*.*?(LIKE\\s*(.*))$/im';
             if (preg_match($pattern, $this->_query, $matches)) {
                 $table_name = str_replace(["'", ';'], '', $matches[2]);
             }
-            if (! empty($table_name)) {
+            if (!empty($table_name)) {
                 $suffix = ' AND name LIKE ' . "'" . $table_name . "'";
             } else {
                 $suffix = '';
@@ -3064,9 +3018,8 @@ HTML
          * This kind of statement is required for WordPress to calculate the paging information.
          * see also WP_Query class in wp-includes/query.php
          */
-        private function handle_sql_count()
-        {
-            if (! $this->rewrite_calc_found) {
+        private function handle_sql_count() {
+            if (!$this->rewrite_calc_found) {
                 return;
             }
             global $wpdb;
@@ -3088,8 +3041,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_insert_ignore()
-        {
+        private function rewrite_insert_ignore() {
             $this->_query = str_ireplace('INSERT IGNORE', 'INSERT OR IGNORE ', $this->_query);
         }
 
@@ -3098,8 +3050,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_update_ignore()
-        {
+        private function rewrite_update_ignore() {
             $this->_query = str_ireplace('UPDATE IGNORE', 'UPDATE OR IGNORE ', $this->_query);
         }
 
@@ -3111,8 +3062,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_date_add()
-        {
+        private function rewrite_date_add() {
             //(date,interval expression unit)
             $pattern = '/\\s*date_add\\s*\(([^,]*),([^\)]*)\)/imsx';
             if (preg_match($pattern, $this->_query, $matches)) {
@@ -3129,8 +3079,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_date_sub()
-        {
+        private function rewrite_date_sub() {
             //(date,interval expression unit)
             $pattern = '/\\s*date_sub\\s*\(([^,]*),([^\)]*)\)/imsx';
             if (preg_match($pattern, $this->_query, $matches)) {
@@ -3147,8 +3096,7 @@ HTML
          *
          * @access private
          */
-        private function handle_create_query()
-        {
+        private function handle_create_query() {
             $engine = new CreateQuery();
             $this->_query = $engine->rewrite_query($this->_query);
             $engine = null;
@@ -3162,8 +3110,7 @@ HTML
          *
          * @access private
          */
-        private function handle_alter_query()
-        {
+        private function handle_alter_query() {
             $engine = new AlterQuery();
             $this->_query = $engine->rewrite_query($this->_query, 'alter');
             $engine = null;
@@ -3177,8 +3124,7 @@ HTML
          *
          * @access private
          */
-        private function handle_describe_query()
-        {
+        private function handle_describe_query() {
             $pattern = '/^\\s*(DESCRIBE|DESC)\\s*(.*)/i';
             if (preg_match($pattern, $this->_query, $match)) {
                 $tablename = preg_replace('/[\';]/', '', $match[2]);
@@ -3197,8 +3143,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_limit_usage()
-        {
+        private function rewrite_limit_usage() {
             $_wpdb = new wpsqlitedb();
             $options = $_wpdb->get_results('PRAGMA compile_options');
             foreach ($options as $opt) {
@@ -3220,8 +3165,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_order_by_usage()
-        {
+        private function rewrite_order_by_usage() {
             $_wpdb = new wpsqlitedb();
             $options = $_wpdb->get_results('PRAGMA compile_options');
             foreach ($options as $opt) {
@@ -3239,8 +3183,7 @@ HTML
          *
          * @access private
          */
-        private function handle_truncate_query()
-        {
+        private function handle_truncate_query() {
             $pattern = '/TRUNCATE TABLE (.*)/im';
             $this->_query = preg_replace($pattern, 'DELETE FROM $1', $this->_query);
         }
@@ -3253,8 +3196,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_optimize()
-        {
+        private function rewrite_optimize() {
             $this->_query = "VACUUM";
         }
 
@@ -3270,8 +3212,7 @@ HTML
          * @return void
          * @access private
          */
-        private function rewrite_badly_formed_dates()
-        {
+        private function rewrite_badly_formed_dates() {
             $pattern = '/([12]\d{3,}-\d{2}-)(\d )/ims';
             $this->_query = preg_replace($pattern, '${1}0$2', $this->_query);
         }
@@ -3282,8 +3223,7 @@ HTML
          * @return void
          * @access private
          */
-        private function delete_index_hints()
-        {
+        private function delete_index_hints() {
             $pattern = '/\\s*(use|ignore|force)\\s+index\\s*\(.*?\)/i';
             $this->_query = preg_replace($pattern, '', $this->_query);
         }
@@ -3302,8 +3242,7 @@ HTML
          * @return void
          * @access private
          */
-        private function fix_date_quoting()
-        {
+        private function fix_date_quoting() {
             $pattern = '/(month|year|second|day|minute|hour|dayofmonth)\\s*\((.*?)\)\\s*=\\s*["\']?(\d{1,4})[\'"]?\\s*/im';
             $this->_query = preg_replace_callback($pattern, [$this, '_fix_date_quoting'], $this->_query);
         }
@@ -3316,8 +3255,7 @@ HTML
          * @return string
          * @access private
          */
-        private function _fix_date_quoting($match)
-        {
+        private function _fix_date_quoting($match) {
             $fixed_val = "{$match[1]}({$match[2]})='" . intval($match[3]) . "' ";
 
             return $fixed_val;
@@ -3331,8 +3269,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_regexp()
-        {
+        private function rewrite_regexp() {
             $pattern = '/\s([^\s]*)\s*regexp\s*(\'.*?\')/im';
             $this->_query = preg_replace($pattern, ' regexpp(\1, \2)', $this->_query);
         }
@@ -3342,8 +3279,7 @@ HTML
          *
          * @access private
          */
-        private function handle_show_columns_query()
-        {
+        private function handle_show_columns_query() {
             $this->_query = str_ireplace(' FULL', '', $this->_query);
             $pattern_like = '/^\\s*SHOW\\s*(COLUMNS|FIELDS)\\s*FROM\\s*(.*)?\\s*LIKE\\s*(.*)?/i';
             $pattern = '/^\\s*SHOW\\s*(COLUMNS|FIELDS)\\s*FROM\\s*(.*)?/i';
@@ -3366,8 +3302,7 @@ HTML
          *
          * @access private
          */
-        private function handle_show_index()
-        {
+        private function handle_show_index() {
             $pattern = '/^\\s*SHOW\\s*(?:INDEX|INDEXES|KEYS)\\s*FROM\\s*(\\w+)?/im';
             if (preg_match($pattern, $this->_query, $match)) {
                 $table_name = preg_replace("/[\';]/", '', $match[1]);
@@ -3387,9 +3322,8 @@ HTML
          * @return void
          * @access private
          */
-        private function execute_duplicate_key_update()
-        {
-            if (! $this->rewrite_duplicate_key) {
+        private function execute_duplicate_key_update() {
+            if (!$this->rewrite_duplicate_key) {
                 return;
             }
             $unique_keys_for_cond = [];
@@ -3403,13 +3337,13 @@ HTML
                 // 1. array('col1', 'col2, col3', etc) 2. array('col1', 'col2', 'col3', etc)
                 $_wpdb = new wpsqlitedb();
                 $indexes = $_wpdb->get_results("SHOW INDEX FROM {$table_name}");
-                if (! empty($indexes)) {
+                if (!empty($indexes)) {
                     foreach ($indexes as $index) {
                         if ($index->Non_unique == 0) {
                             $unique_keys_for_cond[] = $index->Column_name;
                             if (strpos($index->Column_name, ',') !== false) {
                                 $unique_keys_for_check = array_merge($unique_keys_for_check,
-                                    explode(',', $index->Column_name));
+                                        explode(',', $index->Column_name));
                             } else {
                                 $unique_keys_for_check[] = $index->Column_name;
                             }
@@ -3522,9 +3456,8 @@ HTML
          *
          * @access private
          */
-        private function rewrite_between()
-        {
-            if (! $this->rewrite_between) {
+        private function rewrite_between() {
+            if (!$this->rewrite_between) {
                 return;
             }
             $pattern = '/\\s*(CAST\([^\)]+?\)|[^\\s\(]*)?\\s*BETWEEN\\s*([^\\s]*)?\\s*AND\\s*([^\\s\)]*)?\\s*/ims';
@@ -3554,9 +3487,8 @@ HTML
          *
          * @access private
          */
-        private function handle_orderby_field()
-        {
-            if (! $this->orderby_field) {
+        private function handle_orderby_field() {
+            if (!$this->orderby_field) {
                 return;
             }
             global $wpdb;
@@ -3593,8 +3525,7 @@ HTML
          *
          * @access private
          */
-        private function delete_workaround()
-        {
+        private function delete_workaround() {
             global $wpdb;
             $pattern = "DELETE o1 FROM $wpdb->options AS o1 JOIN $wpdb->options AS o2";
             $pattern2 = "DELETE a, b FROM $wpdb->sitemeta AS a, $wpdb->sitemeta AS b";
@@ -3624,18 +3555,17 @@ HTML
          *
          * @access private
          */
-        private function return_true()
-        {
+        private function return_true() {
             $this->_query = 'SELECT 1=1';
         }
+
     }
 
     /**
      * This class provides a function to rewrite CREATE query.
      *
      */
-    class CreateQuery
-    {
+    class CreateQuery {
 
         /**
          * The query string to be rewritten in this class.
@@ -3644,6 +3574,7 @@ HTML
          * @access private
          */
         private $_query = '';
+
         /**
          * The array to contain CREATE INDEX queries.
          *
@@ -3651,6 +3582,7 @@ HTML
          * @access private
          */
         private $index_queries = [];
+
         /**
          * The array to contain error messages.
          *
@@ -3658,6 +3590,7 @@ HTML
          * @access private
          */
         private $_errors = [];
+
         /**
          * Variable to have the table name to be executed.
          *
@@ -3665,6 +3598,7 @@ HTML
          * @access private
          */
         private $table_name = '';
+
         /**
          * Variable to check if the query has the primary key.
          *
@@ -3680,8 +3614,7 @@ HTML
          *
          * @return string|array    the processed (rewritten) query
          */
-        public function rewrite_query($query)
-        {
+        public function rewrite_query($query) {
             $this->_query = $query;
             $this->_errors [] = '';
             if (preg_match('/^CREATE\\s*(UNIQUE|FULLTEXT|)\\s*INDEX/ims', $this->_query, $match)) {
@@ -3725,8 +3658,7 @@ HTML
          *
          * @access private
          */
-        private function get_table_name()
-        {
+        private function get_table_name() {
             // $pattern = '/^\\s*CREATE\\s*(TEMP|TEMPORARY)?\\s*TABLE\\s*(IF NOT EXISTS)?\\s*([^\(]*)/imsx';
             $pattern = '/^\\s*CREATE\\s*(?:TEMP|TEMPORARY)?\\s*TABLE\\s*(?:IF\\s*NOT\\s*EXISTS)?\\s*([^\(]*)/imsx';
             if (preg_match($pattern, $this->_query, $matches)) {
@@ -3745,8 +3677,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_field_types()
-        {
+        private function rewrite_field_types() {
             $array_types = [
                 'bit' => 'integer',
                 'bool' => 'integer',
@@ -3802,10 +3733,9 @@ HTML
          *
          * @access private
          */
-        private function rewrite_comments()
-        {
+        private function rewrite_comments() {
             $this->_query = preg_replace("/# --------------------------------------------------------/",
-                "-- ******************************************************", $this->_query);
+                    "-- ******************************************************", $this->_query);
             $this->_query = preg_replace("/#/", "--", $this->_query);
         }
 
@@ -3815,8 +3745,7 @@ HTML
          * TYPE, ENGINE and AUTO_INCREMENT are removed here.
          * @access private
          */
-        private function rewrite_engine_info()
-        {
+        private function rewrite_engine_info() {
             $this->_query = preg_replace("/\\s*(TYPE|ENGINE)\\s*=\\s*.*(?<!;)/ims", '', $this->_query);
             $this->_query = preg_replace("/ AUTO_INCREMENT\\s*=\\s*[0-9]*/ims", '', $this->_query);
         }
@@ -3829,8 +3758,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_unsigned()
-        {
+        private function rewrite_unsigned() {
             $this->_query = preg_replace('/\\bunsigned\\b/ims', ' ', $this->_query);
         }
 
@@ -3843,12 +3771,11 @@ HTML
          *
          * @access private
          */
-        private function rewrite_autoincrement()
-        {
+        private function rewrite_autoincrement() {
             $this->_query = preg_replace('/\\bauto_increment\\s*primary\\s*key\\s*(,)?/ims',
-                ' PRIMARY KEY AUTOINCREMENT \\1', $this->_query, -1, $count);
+                    ' PRIMARY KEY AUTOINCREMENT \\1', $this->_query, -1, $count);
             $this->_query = preg_replace('/\\bauto_increment\\b\\s*(,)?/ims', ' PRIMARY KEY AUTOINCREMENT $1',
-                $this->_query, -1, $count);
+                    $this->_query, -1, $count);
             if ($count > 0) {
                 $this->has_primary_key = true;
             }
@@ -3859,8 +3786,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_primary_key()
-        {
+        private function rewrite_primary_key() {
             if ($this->has_primary_key) {
                 $this->_query = preg_replace('/\\s*primary key\\s*.*?\([^\)]*\)\\s*(,|)/i', ' ', $this->_query);
             } else {
@@ -3874,8 +3800,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_foreign_key()
-        {
+        private function rewrite_foreign_key() {
             $pattern = '/\\s*foreign\\s*key\\s*(|.*?)\([^\)]+?\)\\s*references\\s*.*/i';
             if (preg_match_all($pattern, $this->_query, $match)) {
                 if (isset($match[1])) {
@@ -3889,10 +3814,9 @@ HTML
          *
          * @access private
          */
-        private function rewrite_unique_key()
-        {
+        private function rewrite_unique_key() {
             $this->_query = preg_replace_callback('/\\bunique key\\b([^\(]*)(\(.*\))/im', [$this, '_rewrite_unique_key'],
-                $this->_query);
+                    $this->_query);
         }
 
         /**
@@ -3903,8 +3827,7 @@ HTML
          * @access private
          * @return string
          */
-        private function _rewrite_unique_key($matches)
-        {
+        private function _rewrite_unique_key($matches) {
             $index_name = trim($matches[1]);
             $col_name = trim($matches[2]);
             $tbl_name = $this->table_name;
@@ -3936,8 +3859,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_enum()
-        {
+        private function rewrite_enum() {
             $pattern = '/(,|\))([^,]*)enum\((.*?)\)([^,\)]*)/ims';
             $this->_query = preg_replace_callback($pattern, [$this, '_rewrite_enum'], $this->_query);
         }
@@ -3951,8 +3873,7 @@ HTML
          *
          * @return string
          */
-        private function _rewrite_enum($matches)
-        {
+        private function _rewrite_enum($matches) {
             $output = $matches[1] . ' ' . $matches[2] . ' TEXT ' . $matches[4] . ' CHECK (' . $matches[2] . ' IN (' . $matches[3] . ')) ';
 
             return $output;
@@ -3965,8 +3886,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_set()
-        {
+        private function rewrite_set() {
             $pattern = '/\b(\w)*\bset\\s*\((.*?)\)\\s*(.*?)(,)*/ims';
             $this->_query = preg_replace_callback($pattern, [$this, '_rewrite_enum'], $this->_query);
         }
@@ -3979,10 +3899,9 @@ HTML
          *
          * @access private
          */
-        private function rewrite_key()
-        {
+        private function rewrite_key() {
             $this->_query = preg_replace_callback('/,\\s*(KEY|INDEX)\\s*(\\w+)?\\s*(\(.+\))/im', [$this, '_rewrite_key'],
-                $this->_query);
+                    $this->_query);
         }
 
         /**
@@ -3993,8 +3912,7 @@ HTML
          * @access private
          * @return string
          */
-        private function _rewrite_key($matches)
-        {
+        private function _rewrite_key($matches) {
             $index_name = trim($matches[2]);
             $col_name = trim($matches[3]);
             if (preg_match('/\([0-9]+?\)/', $col_name, $match)) {
@@ -4028,8 +3946,7 @@ HTML
          * @return string whose length is zero
          * @access private
          */
-        private function _remove_length($match)
-        {
+        private function _remove_length($match) {
             return '';
         }
 
@@ -4041,8 +3958,7 @@ HTML
          * @return array
          * @access private
          */
-        private function post_process()
-        {
+        private function post_process() {
             $mainquery = $this->_query;
             do {
                 $count = 0;
@@ -4066,14 +3982,13 @@ HTML
          *
          * @access private
          */
-        private function add_if_not_exists()
-        {
+        private function add_if_not_exists() {
             $pattern_table = '/^\\s*CREATE\\s*(TEMP|TEMPORARY)?\\s*TABLE\\s*(IF NOT EXISTS)?\\s*/ims';
             $this->_query = preg_replace($pattern_table, 'CREATE $1 TABLE IF NOT EXISTS ', $this->_query);
             $pattern_index = '/^\\s*CREATE\\s*(UNIQUE)?\\s*INDEX\\s*(IF NOT EXISTS)?\\s*/ims';
             for ($i = 0; $i < count($this->index_queries); $i++) {
                 $this->index_queries[$i] = preg_replace($pattern_index, 'CREATE $1 INDEX IF NOT EXISTS ',
-                    $this->index_queries[$i]);
+                        $this->index_queries[$i]);
             }
         }
 
@@ -4082,8 +3997,7 @@ HTML
          *
          * @access private
          */
-        private function strip_backticks()
-        {
+        private function strip_backticks() {
             $this->_query = str_replace('`', '', $this->_query);
             foreach ($this->index_queries as &$query) {
                 $query = str_replace('`', '', $query);
@@ -4098,8 +4012,7 @@ HTML
          *
          * @access private
          */
-        private function rewrite_character_set()
-        {
+        private function rewrite_character_set() {
             $pattern_charset = '/\\b(default\\s*character\\s*set|default\\s*charset|character\\s*set)\\s*(?<!\()[^ ]*/im';
             $pattern_collate1 = '/\\s*collate\\s*[^ ]*(?=,)/im';
             $pattern_collate2 = '/\\s*collate\\s*[^ ]*(?<!;)/im';
@@ -4112,14 +4025,14 @@ HTML
          *
          * @access private
          */
-        private function quote_illegal_field()
-        {
+        private function quote_illegal_field() {
             $this->_query = preg_replace("/^\\s*(?<!')(default|values)/im", "'\\1'", $this->_query);
         }
+
     }
 
-    class AlterQuery
-    {
+    class AlterQuery {
+
         /**
          * Variable to store the rewritten query string.
          * @var string
@@ -4134,8 +4047,7 @@ HTML
          *
          * @return boolean | string
          */
-        public function rewrite_query($query, $query_type)
-        {
+        public function rewrite_query($query, $query_type) {
             if (stripos($query, $query_type) === false) {
                 return false;
             }
@@ -4149,12 +4061,12 @@ HTML
                 $command_array = explode(',', $command);
 
                 $single_command = array_shift($command_array);
-                if (! empty($command_array)) {
+                if (!empty($command_array)) {
                     $re_command = "ALTER TABLE {$tmp_tokens['table_name']} ";
                     $re_command .= implode(',', $command_array);
                 }
                 $command_tokens = $this->command_tokenizer($single_command);
-                if (! empty($command_tokens)) {
+                if (!empty($command_tokens)) {
                     $tokens = array_merge($tmp_tokens, $command_tokens);
                 } else {
                     $this->_query = 'SELECT 1=1';
@@ -4187,7 +4099,7 @@ HTML
                     default:
                         break;
                 }
-                if (! is_array($tmp_query)) {
+                if (!is_array($tmp_query)) {
                     $this->_query[] = $tmp_query;
                 } else {
                     $this->_query = $tmp_query;
@@ -4210,11 +4122,10 @@ HTML
          * @return boolean|array
          * @access private
          */
-        private function command_tokenizer($command)
-        {
+        private function command_tokenizer($command) {
             $tokens = [];
             if (preg_match('/^(ADD|DROP|RENAME|MODIFY|CHANGE|ALTER)\\s*(\\w+)?\\s*(\\w+(\(.+\)|))?\\s*/ims', $command,
-                $match)) {
+                            $match)) {
                 $the_rest = str_ireplace($match[0], '', $command);
                 $match_1 = trim($match[1]);
                 $match_2 = trim($match[2]);
@@ -4232,7 +4143,7 @@ HTML
                             $tokens['column_name'] = $the_rest;
                         } elseif (stripos('unique', $match_2) !== false) {
                             list($index_name, $col_name) = preg_split('/[\(\)]/s', trim($the_rest), -1,
-                                PREG_SPLIT_DELIM_CAPTURE);
+                                    PREG_SPLIT_DELIM_CAPTURE);
                             $tokens['unique'] = true;
                             $tokens['command'] = $match_1 . ' ' . $match_3;
                             $tokens['index_name'] = trim($index_name);
@@ -4354,8 +4265,7 @@ HTML
          *
          * @return string
          */
-        private function handle_single_command($queries)
-        {
+        private function handle_single_command($queries) {
             $tokenized_query = $queries;
             if (stripos($tokenized_query['command'], 'add column') !== false) {
                 $column_def = $this->convert_field_types($tokenized_query['column_name'], $tokenized_query['column_def']);
@@ -4383,8 +4293,7 @@ HTML
          *
          * @return array of string
          */
-        private function handle_add_primary_key($queries)
-        {
+        private function handle_add_primary_key($queries) {
             $tokenized_query = $queries;
             $tbl_name = $tokenized_query['table_name'];
             $temp_table = 'temp_' . $tokenized_query['table_name'];
@@ -4418,8 +4327,7 @@ HTML
          *
          * @return array of string
          */
-        private function handle_drop_primary_key($queries)
-        {
+        private function handle_drop_primary_key($queries) {
             $tokenized_query = $queries;
             $temp_table = 'temp_' . $tokenized_query['table_name'];
             $_wpdb = new wpsqlitedb();
@@ -4457,8 +4365,7 @@ HTML
          *
          * @return string|array of string
          */
-        private function handle_modify_command($queries)
-        {
+        private function handle_modify_command($queries) {
             $tokenized_query = $queries;
             $temp_table = 'temp_' . $tokenized_query['table_name'];
             $column_def = $this->convert_field_types($tokenized_query['column_name'], $tokenized_query['column_def']);
@@ -4477,10 +4384,10 @@ HTML
             $create_query = preg_replace("/{$tokenized_query['table_name']}/i", $temp_table, $create_query);
             if (preg_match("/\\b{$tokenized_query['column_name']}\\s*.*(?=,)/ims", $create_query)) {
                 $create_query = preg_replace("/\\b{$tokenized_query['column_name']}\\s*.*(?=,)/ims",
-                    "{$tokenized_query['column_name']} {$column_def}", $create_query);
+                        "{$tokenized_query['column_name']} {$column_def}", $create_query);
             } elseif (preg_match("/\\b{$tokenized_query['column_name']}\\s*.*(?=\))/ims", $create_query)) {
                 $create_query = preg_replace("/\\b{$tokenized_query['column_name']}\\s*.*(?=\))/ims",
-                    "{$tokenized_query['column_name']} {$column_def}", $create_query);
+                        "{$tokenized_query['column_name']} {$column_def}", $create_query);
             }
             $query[] = $create_query;
             $query[] = "INSERT INTO $temp_table SELECT * FROM {$tokenized_query['table_name']}";
@@ -4502,8 +4409,7 @@ HTML
          *
          * @return string|array of string
          */
-        private function handle_change_command($queries)
-        {
+        private function handle_change_command($queries) {
             $col_check = false;
             $old_fields = '';
             $tokenized_query = $queries;
@@ -4541,14 +4447,14 @@ HTML
                     return 'SELECT 1=1';
                 } else {
                     $create_query = preg_replace("/\\b{$tokenized_query['old_column']}\\s*.+?(?=,)/ims",
-                        "{$column_name} {$column_def}", $create_query, 1);
+                            "{$column_name} {$column_def}", $create_query, 1);
                 }
             } elseif (preg_match("/\\b{$tokenized_query['old_column']}\\s*(.+?)(?=\))/ims", $create_query, $match)) {
                 if (stripos(trim($match[1]), $column_def) !== false) {
                     return 'SELECT 1=1';
                 } else {
                     $create_query = preg_replace("/\\b{$tokenized_query['old_column']}\\s*.*(?=\))/ims",
-                        "{$column_name} {$column_def}", $create_query, 1);
+                            "{$column_name} {$column_def}", $create_query, 1);
                 }
             }
             $query[] = $create_query;
@@ -4571,8 +4477,7 @@ HTML
          *
          * @return string|array of string
          */
-        private function handle_alter_command($queries)
-        {
+        private function handle_alter_command($queries) {
             $tokenized_query = $queries;
             $temp_table = 'temp_' . $tokenized_query['table_name'];
             if (isset($tokenized_query['default_value'])) {
@@ -4592,7 +4497,7 @@ HTML
                 return 'SELECT 1=1';
             }
             if (preg_match("/\\s*({$tokenized_query['column_name']})\\s*(.*)?(DEFAULT\\s*.*)[,)]/im", $create_query,
-                $match)) {
+                            $match)) {
                 $col_name = trim($match[1]);
                 $col_def = trim($match[2]);
                 $col_def_esc = str_replace(['(', ')'], ['\(', '\)'], $col_def);
@@ -4643,8 +4548,7 @@ HTML
          *
          * @return string
          */
-        private function convert_field_types($col_name, $col_def)
-        {
+        private function convert_field_types($col_name, $col_def) {
             $array_curtime = ['current_timestamp', 'current_time', 'current_date'];
             $array_reptime = ["'0000-00-00 00:00:00'", "'0000-00-00 00:00:00'", "'0000-00-00'"];
             $def_string = str_replace('`', '', $col_def);
@@ -4708,6 +4612,7 @@ HTML
             'longtext' => 'TEXT',
             'text' => 'TEXT',
         ];
+
     }
 
     /**
@@ -4717,8 +4622,7 @@ HTML
      *
      * @return boolean
      */
-    function make_db_sqlite()
-    {
+    function make_db_sqlite() {
         include_once ABSPATH . 'wp-admin/includes/schema.php';
         $index_array = [];
 
@@ -4768,7 +4672,7 @@ HTML
                         $r = rand(0, 50);
                         $replacement = $index_name . "_$r";
                         $index_query = str_ireplace('EXISTS ' . $index_name, 'EXISTS ' . $replacement,
-                            $index_query);
+                                $index_query);
                     } else {
                         $index_array[] = $index_name;
                     }
@@ -4785,7 +4689,7 @@ HTML
             } else {
                 $pdo->rollBack();
                 $message = sprintf("Error occured while creating tables or indexes...<br />Query was: %s<br />",
-                    var_export($rewritten_query, true));
+                        var_export($rewritten_query, true));
                 $message .= sprintf("Error message is: %s", $err_data[2]);
                 wp_die($message, 'Database Error!');
             }
@@ -4796,6 +4700,7 @@ HTML
 
         return true;
     }
+
 } // WP_SQLite_DB namespace
 
 namespace {
@@ -4818,9 +4723,8 @@ namespace {
      *
      * @return array Array keys 'url', 'user_id', 'password', and 'password_message'.
      */
-    function wp_install($blog_title, $user_name, $user_email, $public, $deprecated = '', $user_password = '', $language = '')
-    {
-        if (! empty($deprecated)) {
+    function wp_install($blog_title, $user_name, $user_email, $public, $deprecated = '', $user_password = '', $language = '') {
+        if (!empty($deprecated)) {
             _deprecated_argument(__FUNCTION__, '2.6.0');
         }
 
@@ -4828,7 +4732,7 @@ namespace {
         wp_cache_flush();
         /* begin wp-sqlite-db changes */
         // make_db_current_silent();
-        SQLite_DB\make_db_sqlite();
+        WP_SQLite_DB\make_db_sqlite();
         /* end wp-sqlite-db changes */
         populate_options();
         populate_roles();
@@ -4849,7 +4753,7 @@ namespace {
         update_option('siteurl', $guessurl);
 
         // If not a public blog, don't ping.
-        if (! $public) {
+        if (!$public) {
             update_option('default_pingback_flag', 0);
         }
 
@@ -4860,13 +4764,13 @@ namespace {
         $user_id = username_exists($user_name);
         $user_password = trim($user_password);
         $email_password = false;
-        if (! $user_id && empty($user_password)) {
+        if (!$user_id && empty($user_password)) {
             $user_password = wp_generate_password(12, false);
             $message = __('<strong><em>Note that password</em></strong> carefully! It is a <em>random</em> password that was generated just for you.');
             $user_id = wp_create_user($user_name, $user_password, $user_email);
             update_user_option($user_id, 'default_password_nag', true, true);
             $email_password = true;
-        } elseif (! $user_id) {
+        } elseif (!$user_id) {
             // Password has been provided
             $message = '<em>' . __('Your chosen password.') . '</em>';
             $user_id = wp_create_user($user_name, $user_password, $user_email);
@@ -4899,6 +4803,6 @@ namespace {
         return ['url' => $guessurl, 'user_id' => $user_id, 'password' => $user_password, 'password_message' => $message];
     }
 
-    $GLOBALS['wpdb'] = new \SQLite_DB\wpsqlitedb();
+    $GLOBALS['wpdb'] = new WP_SQLite_DB\wpsqlitedb();
 }
 

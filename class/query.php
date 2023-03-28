@@ -123,6 +123,7 @@ class PDOSQLiteDriver {
 				break;
 			case 'delete':
 				//$this->strip_backticks();
+                                //$this->strip_delete_fields();
 				$this->rewrite_limit_usage();
 				$this->rewrite_order_by_usage();
 				$this->rewrite_date_sub();
@@ -372,7 +373,7 @@ class PDOSQLiteDriver {
 	 * @access private
 	 */
 	private function handle_create_query(){
-		require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query_create.php';
+		require_once SQLITE_DB_PATH . 'class'.DIRECTORY_SEPARATOR.'query_create.php';
 		$engine = new CreateQuery();
 		$this->_query = $engine->rewrite_query($this->_query);
 		$engine = null;
@@ -387,7 +388,7 @@ class PDOSQLiteDriver {
 	 * @access private
 	 */
 	private function handle_alter_query(){
-		require_once PDODIR . 'class'.DIRECTORY_SEPARATOR.'query_alter.php';
+		require_once SQLITE_DB_PATH . 'class'.DIRECTORY_SEPARATOR.'query_alter.php';
 		$engine = new AlterQuery();
 		$this->_query = $engine->rewrite_query($this->_query, 'alter');
 		$engine = null;
@@ -693,6 +694,7 @@ class PDOSQLiteDriver {
 							$value = $ins_array_assoc[$col];
 						}
 					}
+                                        $where_array = [];
 					foreach ($ins_array_assoc as $key => $val) {
 						if (in_array($key, $unique_keys_for_check)) {
 							$where_array[] = $key . '=' . $val;
@@ -707,8 +709,12 @@ class PDOSQLiteDriver {
 						}
 					}
 					$update_strings = rtrim($update_strings, ',');
-					$unique_where   = array_unique($where_array, SORT_REGULAR);
-					$where_string   = ' WHERE ' . implode(' AND ', $unique_where);
+                                        if (!empty($where_array)) {
+                                            $unique_where   = array_unique($where_array, SORT_REGULAR);
+                                            $where_string   = ' WHERE ' . implode(' AND ', $unique_where);
+                                        } else {
+                                            $where_string   = ' WHERE ' . $condition;
+                                        }
 					$update_query = 'UPDATE ' . $table_name . ' SET ' . $update_strings . $where_string;
 					$this->_query = $update_query;
 				}
@@ -833,6 +839,13 @@ class PDOSQLiteDriver {
 	 */
 	private function return_true() {
 		$this->_query = 'SELECT 1=1';
+	}
+        
+        //https://www.w3schools.com/sql/sql_delete.asp
+        private function strip_delete_fields(){
+            list ($pre, $next) = explode('DELETE', $this->_query, 2);
+            list ($pre, $next) = explode('FROM', $next, 2);
+            $this->_query = 'DELETE FROM'.$next;
 	}
 }
 ?>

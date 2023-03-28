@@ -423,7 +423,7 @@ define('PROJECT_BUGTRACKER_LINK', '<a href="https://bitbucket.org/phpliteadmin/p
 define('PROJECT_INSTALL_LINK', '<a href="https://bitbucket.org/phpliteadmin/public/wiki/Installation" target="_blank">https://bitbucket.org/phpliteadmin/public/wiki/Installation</a>');
 
 // up here, we don't output anything. debug output might appear here which is catched by ob and thrown later
-ob_start();
+//ob_start();
 
 // Resource output (css and javascript files)
 // we get out of the main code as soon as possible, without inizializing the session
@@ -432,18 +432,20 @@ if (isset($_GET['resource'])) {
     exit();
 }
 /*
-// don't mess with this - required for the login session
-ini_set('session.cookie_httponly', '1');
-session_start();
-*/
+  // don't mess with this - required for the login session
+  ini_set('session.cookie_httponly', '1');
+  
+ */
 // version-number added so after updating, old session-data is not used anylonger
 // cookies names cannot contain symbols, except underscores
 define("COOKIENAME", preg_replace('/[^a-zA-Z0-9_]/', '_', $cookie_name . '_' . VERSION));
 
 $params = new GetParameters();
 
+$get_action = isset($_GET['action']) ? $_GET['action'] : '';
+
 // start the timer to record page load time
-$pageTimer = microtime();
+$pageTimer = microtime(true);
 
 // load language file
 if ($language != 'en') {
@@ -457,27 +459,27 @@ if ($language != 'en') {
 }
 
 /*
-// stripslashes if MAGIC QUOTES is turned on
-// This is only a workaround. Please better turn off magic quotes!
-// This code is from http://php.net/manual/en/security.magicquotes.disabling.php
-if (function_exists('get_magic_quotes_gpc')) {
-    if (get_magic_quotes_gpc()) {
-        $process = array(&$_GET, &$_POST, &$_COOKIE, &$_REQUEST);
-        while (list($key, $val) = each($process)) {
-            foreach ($val as $k => $v) {
-                unset($process[$key][$k]);
-                if (is_array($v)) {
-                    $process[$key][stripslashes($k)] = $v;
-                    $process[] = &$process[$key][stripslashes($k)];
-                } else {
-                    $process[$key][stripslashes($k)] = stripslashes($v);
-                }
-            }
-        }
-        unset($process);
-    }
-}
-*/
+  // stripslashes if MAGIC QUOTES is turned on
+  // This is only a workaround. Please better turn off magic quotes!
+  // This code is from http://php.net/manual/en/security.magicquotes.disabling.php
+  if (function_exists('get_magic_quotes_gpc')) {
+  if (get_magic_quotes_gpc()) {
+  $process = array(&$_GET, &$_POST, &$_COOKIE, &$_REQUEST);
+  while (list($key, $val) = each($process)) {
+  foreach ($val as $k => $v) {
+  unset($process[$key][$k]);
+  if (is_array($v)) {
+  $process[$key][stripslashes($k)] = $v;
+  $process[] = &$process[$key][stripslashes($k)];
+  } else {
+  $process[$key][stripslashes($k)] = stripslashes($v);
+  }
+  }
+  }
+  unset($process);
+  }
+  }
+ */
 
 //data types array
 $sqlite_datatypes = array("INTEGER", "REAL", "TEXT", "BLOB", "NUMERIC", "BOOLEAN", "DATETIME");
@@ -764,7 +766,8 @@ if ($auth->isAuthorized()) {
 
                 if (@!is_file($arr[$i]))
                     continue;
-                $con = file_get_contents($arr[$i], NULL, NULL, 0, 60);
+                //var_dump($arr[$i]);
+                $con = file_get_contents($arr[$i], false, NULL, 0, 60);
                 if (strpos($con, "** This file contains an SQLite 2.1 database **", 0) !== false || strpos($con, "SQLite format 3", 0) !== false) {
                     $databases[$j]['path'] = $arr[$i];
                     if ($subdirectories === false)
@@ -813,7 +816,7 @@ if ($auth->isAuthorized()) {
         $selected_db = str_replace('\\\\', '\\', $selected_db);
         //var_dump($selected_db); die();
         $db_key = isManagedDB($selected_db);
-        
+
         if ($db_key !== false) {
             $currentDB = $databases[$db_key];
             $params->database = $databases[$db_key]['path'];
@@ -873,11 +876,12 @@ if ($auth->isAuthorized()) {
         }
     }
 
-    //var_dump($_POST);
     //- Export (download a dump) an existing database
     if (isset($_POST['export'])) {
-        ob_end_clean();
+        //var_dump($_POST); die();
+        ob_start();
         $export_filename = str_replace(array("\r", "\n"), '', $_POST['filename']); // against http header injection (php < 5.1.2 only)
+        $export_filename .= '.'.$_POST['export_type'];
         if ($_POST['export_type'] == "sql") {
             //header('Content-Type: text/sql');
             //header('Content-Disposition: attachment; filename="' . $export_filename . '.' . $_POST['export_type'] . '";');
@@ -894,7 +898,6 @@ if ($auth->isAuthorized()) {
             $comments = isset($_POST['comments']);
             $db = new Database($currentDB);
             $tmp_data = $db->export_sql($tables, $drop, $structure, $data, $transaction, $comments);
-            
         } else if ($_POST['export_type'] == "csv") {
             //header("Content-type: application/csv");
             //header('Content-Disposition: attachment; filename="' . $export_filename . '.' . $_POST['export_type'] . '";');
@@ -915,11 +918,21 @@ if ($auth->isAuthorized()) {
             $db = new Database($currentDB);
             $tmp_data = $db->export_csv($tables, $field_terminate, $field_enclosed, $field_escaped, $null, $crlf, $fields_in_first_row);
         }
-        $tmp_file = WP_CONTENT_DIR.'uploads'.DIRECTORY_SEPARATOR.'export.'.$_POST['export_type'];
+        $tmp_data = ob_get_clean();
+        $tmp_data = str_replace('\\"', '"', $tmp_data);
+        $tmp_folder = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'export';
+        if (!is_dir($tmp_folder)) mkdir($tmp_folder, 0777);
+        $tmp_file = $tmp_folder . DIRECTORY_SEPARATOR . $export_filename;
+        $tmp_file = str_replace('/', DIRECTORY_SEPARATOR, $tmp_file);
+        //var_dump($tmp_file); die();
         file_put_contents($tmp_file, $tmp_data);
-        wp_redirect($tmp_file);
-        
-        exit();
+        $url_file = WP_CONTENT_URL.'/uploads/export/'.$export_filename;
+        //var_dump($tmp_file);var_dump($url_file); die();
+        echo '<a href="'. $url_file .'" class="button"><span class="dashicons dashicons-download"></span> '.$export_filename.'</a> ';
+        echo $params->getLink([], 'BACK', 'button ');
+        echo '<script>window.location.href = "'. $url_file .'";</script>';
+        //wp_redirect($tmp_file);
+        //exit();
     }
 
     //- Import a file into an existing database
@@ -966,6 +979,11 @@ if ($auth->isAuthorized()) {
     if (!isset($currentDB) && count($databases) > 0) {
         //set the current database to the first existing one in the array (default)
         $currentDB = reset($databases);
+        foreach ($databases as $adb) {
+            if ($adb['name'] == DB_NAME.'.sqlite') {
+                $currentDB = $adb;
+            }
+        }
         $params->database = $currentDB['path'];
     }
 
@@ -994,9 +1012,9 @@ if ($auth->isAuthorized()) {
     else
         $params->numRows = $rowsNum;
 
-    //- Switch on $_GET['action'] for operations without output
-    if (isset($_GET['action']) && isset($_GET['confirm'])) {
-        switch ($_GET['action']) {
+    //- Switch on $get_action for operations without output
+    if (isset($get_action) && isset($_GET['confirm'])) {
+        switch ($get_action) {
             //- Table actions
             //- Create table (=table_create)
             case "table_create":
@@ -1142,36 +1160,39 @@ if ($auth->isAuthorized()) {
                 $tableInfo = $db->getTableInfo($target_table);
                 $j = 0;
                 $whereExpr = array();
+                //var_dump($_POST);
                 for ($i = 0; $i < sizeof($tableInfo); $i++) {
-                    $field = $tableInfo[$i][1];
-                    $operator = $_POST['field_' . $i . '_operator'];
-                    $searchOperators[$field] = $operator;
-                    $value = $_POST['field_' . $i . '_value'];
-                    if ($value != "" || $operator == "!= ''" || $operator == "= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL') {
-                        if ($operator == "= ''" || $operator == "!= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL')
-                            $whereExpr[$j] = $db->quote_id($field) . " " . $operator;
-                        else {
-                            if ($operator == "LIKE%") {
-                                $operator = "LIKE";
-                                if (!preg_match('/(^%)|(%$)/', $value))
-                                    $value = '%' . $value . '%';
-                                $searchValues[$field] = array($value);
-                                $valueQuoted = $db->quote($value);
-                            } elseif ($operator == 'IN' || $operator == 'NOT IN') {
-                                $value = trim($value, '() ');
-                                $values = explode(',', $value);
-                                $values = array_map('trim', $values, array_fill(0, count($values), ' \'"'));
-                                if ($operator == 'IN')
-                                    $searchValues[$field] = $values;
-                                $values = array_map(array($db, 'quote'), $values);
-                                $valueQuoted = '(' . implode(', ', $values) . ')';
-                            } else {
-                                $searchValues[$field] = array($value);
-                                $valueQuoted = $db->quote($value);
+                    if (isset($_POST['field_' . $i . '_operator'])) {
+                        $field = $tableInfo[$i][1];
+                        $operator = $_POST['field_' . $i . '_operator'];
+                        $searchOperators[$field] = $operator;
+                        $value = $_POST['field_' . $i . '_value'];
+                        if ($value != "" || $operator == "!= ''" || $operator == "= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL') {
+                            if ($operator == "= ''" || $operator == "!= ''" || $operator == 'IS NULL' || $operator == 'IS NOT NULL')
+                                $whereExpr[$j] = $db->quote_id($field) . " " . $operator;
+                            else {
+                                if ($operator == "LIKE%") {
+                                    $operator = "LIKE";
+                                    if (!preg_match('/(^%)|(%$)/', $value))
+                                        $value = '%' . $value . '%';
+                                    $searchValues[$field] = array($value);
+                                    $valueQuoted = $db->quote($value);
+                                } elseif ($operator == 'IN' || $operator == 'NOT IN') {
+                                    $value = trim($value, '() ');
+                                    $values = explode(',', $value);
+                                    $values = array_map('trim', $values, array_fill(0, count($values), ' \'"'));
+                                    if ($operator == 'IN')
+                                        $searchValues[$field] = $values;
+                                    $values = array_map(array($db, 'quote'), $values);
+                                    $valueQuoted = '(' . implode(', ', $values) . ')';
+                                } else {
+                                    $searchValues[$field] = array($value);
+                                    $valueQuoted = $db->quote($value);
+                                }
+                                $whereExpr[$j] = $db->quote_id($field) . " " . $operator . " " . $valueQuoted;
                             }
-                            $whereExpr[$j] = $db->quote_id($field) . " " . $operator . " " . $valueQuoted;
+                            $j++;
                         }
-                        $j++;
                     }
                 }
                 $searchWhere = '';
@@ -1187,7 +1208,8 @@ if ($auth->isAuthorized()) {
                     'values' => $searchValues,
                     'operators' => $searchOperators
                 );
-                $params->redirect(array('action' => 'table_search', 'search' => $searchID));
+                //var_dump($_SESSION); die();
+                $params->redirect(array('action' => 'table_search', 'tsearch' => $searchID));
                 break;
 
             //- Row actions
@@ -1622,11 +1644,12 @@ if ($auth->isAuthorized()) {
         }
     }
 }
-
+/*
 // if not in debug mode, destroy all output until here
 if ($debug)
     $bufferedOutput = ob_get_contents();
 ob_end_clean();
+*/
 
 //- HTML: output starts here
 //header('Content-Type: text/html; charset=utf-8');
@@ -1723,8 +1746,8 @@ if (isset($_GET['help'])) {
  * 
  */
 // if in debug mode, ouput all output that has been generated above now
-if ($debug)
-    echo $bufferedOutput;
+//if ($debug)
+//    echo $bufferedOutput;
 
 if (ini_get("register_globals") == "on" || ini_get("register_globals") == "1") { //check whether register_globals is turned on - if it is, we need to not continue
     echo "<div class='confirm' style='margin:20px;'>" . $lang['bad_php_directive'] . "</div>";
@@ -1886,43 +1909,43 @@ echo "<br/><br/>";
 if ($target_table) {
     //- HTML: tabs
     echo $params->getLink(array('action' => 'row_view'), $lang['browse'],
-            (in_array($_GET['action'], array('row_view', 'row_editordelete')) ? 'tab_pressed' : 'tab'));
+            (in_array($get_action, array('row_view', 'row_editordelete')) ? 'tab_pressed' : 'tab'));
 
     echo $params->getLink(array('action' => 'column_view'), $lang['struct'],
-            (in_array($_GET['action'], array('column_view', 'column_edit', 'column_confirm', 'primarykey_add', 'column_create', 'index_create', 'index_delete', 'trigger_create', 'trigger_delete')) ? 'tab_pressed' : 'tab'));
+            (in_array($get_action, array('column_view', 'column_edit', 'column_confirm', 'primarykey_add', 'column_create', 'index_create', 'index_delete', 'trigger_create', 'trigger_delete')) ? 'tab_pressed' : 'tab'));
 
     echo $params->getLink(array('action' => 'table_sql'), $lang['sql'],
-            ($_GET['action'] == "table_sql" ? 'tab_pressed' : 'tab'));
+            ($get_action == "table_sql" ? 'tab_pressed' : 'tab'));
 
     echo $params->getLink(array(
         'action' => 'table_search',
-        'oldSearch' => (isset($_GET['search']) ? $_GET['search'] : null)
-            ), $lang['srch'], ($_GET['action'] == "table_search" ? 'tab_pressed' : 'tab'));
+        'oldSearch' => (isset($_GET['tsearch']) ? $_GET['tsearch'] : null)
+            ), $lang['srch'], ($get_action == "table_search" ? 'tab_pressed' : 'tab'));
 
     if ($target_table_type == 'table' && $db->isWritable() && $db->isDirWritable())
         echo $params->getLink(array('action' => 'row_create'), $lang['insert'],
-                ($_GET['action'] == "row_create" ? 'tab_pressed' : 'tab'));
+                ($get_action == "row_create" ? 'tab_pressed' : 'tab'));
 
     echo $params->getLink(array('action' => 'table_export'), $lang['export'],
-            ($_GET['action'] == "table_export" ? 'tab_pressed' : 'tab'));
+            ($get_action == "table_export" ? 'tab_pressed' : 'tab'));
 
     if ($target_table_type == 'table' && $db->isWritable() && $db->isDirWritable())
         echo $params->getLink(array('action' => 'table_import'), $lang['import'],
-                ($_GET['action'] == "table_import" ? 'tab_pressed' : 'tab'));
+                ($get_action == "table_import" ? 'tab_pressed' : 'tab'));
 
     if ($db->isWritable() && $db->isDirWritable())
         echo $params->getLink(array('action' => 'table_rename'), $lang['rename'],
-                ($_GET['action'] == "table_rename" ? 'tab_pressed' : 'tab'));
+                ($get_action == "table_rename" ? 'tab_pressed' : 'tab'));
 
     if ($target_table_type == 'table' && $db->isWritable() && $db->isDirWritable()) {
         echo $params->getLink(array('action' => 'table_empty'), $lang['empty'],
-                ($_GET['action'] == "table_empty" ? 'tab_pressed empty' : 'tab empty'));
+                ($get_action == "table_empty" ? 'tab_pressed empty' : 'tab empty'));
 
         echo $params->getLink(array('action' => 'table_drop'), $lang['drop'],
-                ($_GET['action'] == "table_drop" ? 'tab_pressed drop' : 'tab drop'));
+                ($get_action == "table_drop" ? 'tab_pressed drop' : 'tab drop'));
     } elseif ($db->isWritable() && $db->isDirWritable()) {
         echo $params->getLink(array('action' => 'view_drop'), $lang['drop'],
-                ($_GET['action'] == "view_drop" ? 'tab_pressed drop' : 'tab drop'));
+                ($get_action == "view_drop" ? 'tab_pressed drop' : 'tab drop'));
     }
 } else {
 //- Show the various tab views for a database
@@ -1950,7 +1973,7 @@ if ($target_table) {
 }
 
 echo "<div style='clear:both;'></div>";
-echo '<div id="sqlite-main" class="wp-list-table widefat striped table-view-list">';
+echo '<div id="sqlite-main" class="wp-list-table widefat striped table-view-list"><div>';
 
 //- HTML: confirmation panel
 //if the user has performed some action, show the resulting message
@@ -1962,9 +1985,9 @@ if (isset($_GET['message']) && isset($_SESSION[COOKIENAME . 'messages'][$_GET['m
 }
 
 
-//- Switch on $_GET['action'] for operations with output
-if (isset($_GET['action']) && !isset($_GET['confirm'])) {
-    switch ($_GET['action']) {
+//- Switch on $get_action for operations with output
+if (isset($get_action) && !isset($_GET['confirm'])) {
+    switch ($get_action) {
         //- Table actions
         //- Create table (=table_create)
         case "table_create":
@@ -2060,7 +2083,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
 
                 for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
                     if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
-                        $queryTimer = microtime();
+                        $queryTimer = microtime(true);
                         $table_result = $db->query($query[$i]);
 
                         echo "<div class='confirm'>";
@@ -2096,7 +2119,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                                 }
                                 echo "</tr>";
                             }
-                            $queryTimer = microtime() - $queryTimer;
+                            $queryTimer = microtime(true) - $queryTimer;
                             echo "</table><br/><br/>";
 
                             if ($table_result !== NULL && $table_result !== false) {
@@ -2284,7 +2307,8 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
 
         //- Search table (=table_search)
         case "table_search":
-            if (!isset($_GET['search'])) {
+            //var_dump($_SESSION); die();
+            if (!isset($_GET['tsearch'])) {
                 $tableInfo = $db->getTableInfo($target_table);
 
                 echo $params->getForm(array('action' => 'table_search', 'confirm' => '1'));
@@ -2303,9 +2327,10 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                     $typeAffinity = get_type_affinity($type);
                     $tdWithClass = "<td class='td" . ($i % 2 ? "1" : "2") . "'>";
                     $tdWithClassLeft = "<td class='td" . ($i % 2 ? "1" : "2") . "' style='text-align:left;'>";
-                    if (isset($_GET['oldSearch']) && isset($_SESSION[COOKIENAME . 'search'][$_GET['oldSearch']]['values'][$field]))
-                        $value = implode($_SESSION[COOKIENAME . 'search'][$_GET['oldSearch']]['values'][$field], ",");
-                    else
+                    if (isset($_GET['oldSearch']) && isset($_SESSION[COOKIENAME . 'search'][$_GET['oldSearch']]['values'][$field])) {
+                        $value = $_SESSION[COOKIENAME . 'search'][$_GET['oldSearch']]['values'][$field];
+                        $value = is_array($value) ? implode(",", $value) : $value;
+                    } else
                         $value = '';
                     if (isset($_GET['oldSearch']) && isset($_SESSION[COOKIENAME . 'search'][$_GET['oldSearch']]['operators'][$field]))
                         $operator = $_SESSION[COOKIENAME . 'search'][$_GET['oldSearch']]['operators'][$field];
@@ -2355,11 +2380,13 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                 echo "</form>";
 
                 break;
-            } elseif (isset($_SESSION[COOKIENAME . 'search'][$_GET['search']])) {
-                $params->search = $_GET['search'];
-                $search = $_SESSION[COOKIENAME . 'search'][$_GET['search']];
+            } elseif (isset($_SESSION[COOKIENAME . 'search'][$_GET['tsearch']])) {
+                $params->search = $_GET['tsearch'];
+                $search = $_SESSION[COOKIENAME . 'search'][$_GET['tsearch']];
                 // NOTICE: we do not break here!! we just do the same now like row_view-action does
             }
+            //var_dump(COOKIENAME);
+            //var_dump($_SESSION);
 
         //- Row actions
         //- View row (=row_view)
@@ -2429,13 +2456,13 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
             //previous button
             if ($_GET['startRow'] > 0) {
                 echo "<div style='float:left;'>";
-                echo $params->getForm(array('action' => $_GET['action']), 'get');
+                echo $params->getForm(array('action' => $get_action), 'get');
                 echo "<input type='hidden' name='startRow' value='0'/>";
                 echo "<input type='submit' value='&larr;&larr;' class='btn'/> ";
                 echo "</form>";
                 echo "</div>";
                 echo "<div style='float:left; overflow:hidden; margin-right:20px;'>";
-                echo $params->getForm(array('action' => $_GET['action']), 'get');
+                echo $params->getForm(array('action' => $get_action), 'get');
                 echo "<input type='hidden' name='startRow' value='" . max(0, intval($_GET['startRow'] - $params->numRows)) . "'/>";
                 echo "<input type='submit' value='&larr;' class='btn'/> ";
                 echo "</form>";
@@ -2444,7 +2471,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
 
             //show certain number buttons
             echo "<div style='float:left;'>";
-            echo $params->getForm(array('action' => $_GET['action'], 'numRows' => null), 'get');
+            echo $params->getForm(array('action' => $get_action, 'numRows' => null), 'get');
             echo "<input type='submit' value='" . $lang['show'] . " : ' name='show' class='btn'/> ";
             echo "<input type='text' name='numRows' style='width:50px;' value='" . $params->numRows . "'/> ";
             echo $lang['rows_records'];
@@ -2469,13 +2496,13 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
             //next button
             if (intval($_GET['startRow'] + $params->numRows) < $totalRows) {
                 echo "<div style='float:left; margin-left:20px; '>";
-                echo $params->getForm(array('action' => $_GET['action']), 'get');
+                echo $params->getForm(array('action' => $get_action), 'get');
                 echo "<input type='hidden' name='startRow' value='" . intval($_GET['startRow'] + $params->numRows) . "'/>";
                 echo "<input type='submit' value='&rarr;' class='btn'/> ";
                 echo "</form>";
                 echo "</div>";
                 echo "<div style='float:left; '>";
-                echo $params->getForm(array('action' => $_GET['action']), 'get');
+                echo $params->getForm(array('action' => $get_action), 'get');
                 echo "<input type='hidden' name='startRow' value='" . intval($totalRows - $remainder) . "'/>";
                 echo "<input type='submit' value='&rarr;&rarr;' class='btn'/> ";
                 echo "</form>";
@@ -2486,9 +2513,9 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
 
             //- Show results
             if ($shownRows > 0) {
-                $queryTimer = microtime();
+                $queryTimer = microtime(true);
                 $table_result = $db->query($query);
-                $queryTimer = microtime() - $queryTimer;
+                $queryTimer = microtime(true) - $queryTimer;
 
                 echo "<br/><div class='confirm'>";
                 echo "<b>" . $lang['showing_rows'] . " " . $startRow . " - " . ($startRow + $shownRows - 1) . ", " . $lang['total'] . ": " . $totalRows . " ";
@@ -2510,7 +2537,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                     echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                     echo "<tr>";
                     echo "<td colspan='3' class='tdheader' style='text-align:center'>";
-                    echo "<a href='" . $params->getURL(array('action' => $_GET['action'], 'fulltexts' => ($params->fulltexts ? 0 : 1))) . "' title='" . $lang[($params->fulltexts ? 'no_full_texts' : 'full_texts')] . "'>";
+                    echo "<a href='" . $params->getURL(array('action' => $get_action, 'fulltexts' => ($params->fulltexts ? 0 : 1))) . "' title='" . $lang[($params->fulltexts ? 'no_full_texts' : 'full_texts')] . "'>";
                     echo "<b>&" . ($params->fulltexts ? 'r' : 'l') . "arr;</b>&nbsp;T&nbsp;<b>&" . ($params->fulltexts ? 'l' : 'r') . "arr;</b></a>";
                     echo "</td>";
 
@@ -2520,7 +2547,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                             $orderTag = ($_SESSION[COOKIENAME . 'sortRows'] == $tableInfo[$i]['name'] && $_SESSION[COOKIENAME . 'orderRows'] == "ASC") ? "DESC" : "ASC";
                         else
                             $orderTag = "ASC";
-                        echo $params->getLink(array('action' => $_GET['action'], 'sort' => $tableInfo[$i]['name'], 'order' => $orderTag), htmlencode($tableInfo[$i]['name']));
+                        echo $params->getLink(array('action' => $get_action, 'sort' => $tableInfo[$i]['name'], 'order' => $orderTag), htmlencode($tableInfo[$i]['name']));
                         if (isset($_SESSION[COOKIENAME . 'sortRows']) && $_SESSION[COOKIENAME . 'sortRows'] == $tableInfo[$i]['name'])
                             echo (($_SESSION[COOKIENAME . 'orderRows'] == "ASC") ? " <b>&uarr;</b>" : " <b>&darr;</b>");
                         echo "</td>";
@@ -2700,7 +2727,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                     <div id="chart_div" style="float:left;"><?php echo $lang['no_chart']; ?></div>
                     <?php
                     echo "<fieldset style='float:right; text-align:center;' id='chartsettingsbox'><legend><b>Chart Settings</b></legend>";
-                    echo $params->getForm(array('action' => $_GET['action']));
+                    echo $params->getForm(array('action' => $get_action));
                     echo $lang['chart_type'] . ": <select name='charttype'>";
                     echo "<option value='bar'";
                     if ($_SESSION[COOKIENAME . 'charttype'] == "bar")
@@ -2751,7 +2778,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
             }
 
             if (isset($search))
-                echo "<br/><br/>" . $params->getLink(array('action' => 'table_search', 'search' => null, 'oldSearch' => (isset($_GET['search']) ? $_GET['search'] : null)), $lang['srch_again']);
+                echo "<br/><br/>" . $params->getLink(array('action' => 'table_search', 'tsearch' => null, 'oldSearch' => (isset($_GET['tsearch']) ? $_GET['tsearch'] : null)), $lang['srch_again']);
 
             break;
 
@@ -2796,8 +2823,11 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
                     $typeAffinity = get_type_affinity($type);
                     if ($tableInfo[$i]['dflt_value'] === "NULL")
                         $value = NULL;
-                    else
-                        $value = htmlencode(trim(trim($tableInfo[$i]['dflt_value']), "'"));
+                    else {
+                        $tmp = empty ($tableInfo[$i]['dflt_value']) ? '' : trim($tableInfo[$i]['dflt_value']);
+                        $tmp = $tmp ? trim($tmp, "'") : $tmp;
+                        $value = htmlencode($tmp);
+                    }
                     $tdWithClassLeft = "<td class='td" . ($i % 2 ? "1" : "2") . "' style='text-align:left;'>";
                     echo "<tr>";
                     echo $tdWithClassLeft;
@@ -3457,7 +3487,7 @@ if (isset($_GET['action']) && !isset($_GET['confirm'])) {
 }
 
 //- HMTL: views for databases
-if (!$target_table && !isset($_GET['confirm']) && (!isset($_GET['action']) || (isset($_GET['action']) && $_GET['action'] != "table_create"))) { //the absence of these fields means we are viewing the database homepage
+if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset($get_action) && $get_action != "table_create"))) { //the absence of these fields means we are viewing the database homepage
     //- Switch on $view (actually a series of if-else)
     if ($view == "structure") {
         //- Database structure, shows all the tables (=structure)
@@ -3637,7 +3667,7 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($_GET['action']) || (i
 
             for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
                 if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
-                    $queryTimer = microtime();
+                    $queryTimer = microtime(true);
                     $table_result = $db->query($query[$i]);
 
                     echo "<div class='confirm'>";
@@ -3673,7 +3703,7 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($_GET['action']) || (i
                             }
                             echo "</tr>";
                         }
-                        $queryTimer = microtime() - $queryTimer;
+                        $queryTimer = microtime(true) - $queryTimer;
                         echo "</table><br/><br/>";
 
                         if ($table_result !== NULL && $table_result !== false) {
@@ -3980,11 +4010,11 @@ class Authorization {
             elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['token']))
                 $check_token = $_GET['token'];
             //var_dump($_SESSION[COOKIENAME . 'token']);
-            /*if (!isset($check_token)) {
-                die("CSRF token missing");
-            } elseif (!hash_equals($_SESSION[COOKIENAME . 'token'], $check_token)) {
-                die("CSRF token is wrong - please try to login again");
-            }*/
+            /* if (!isset($check_token)) {
+              die("CSRF token missing");
+              } elseif (!hash_equals($_SESSION[COOKIENAME . 'token'], $check_token)) {
+              die("CSRF token is wrong - please try to login again");
+              } */
         }
     }
 
@@ -4208,7 +4238,7 @@ class Database {
     //get the version of the database
     public function getVersion() {
         if (file_exists($this->data['path'])) { //make sure file exists before getting its contents
-            $content = strtolower(file_get_contents($this->data['path'], NULL, NULL, 0, 40)); //get the first 40 characters of the database file
+            $content = strtolower(file_get_contents($this->data['path'], false, NULL, 0, 40)); //get the first 40 characters of the database file
             $p = strpos($content, "** this file contains an sqlite 2"); //this text is at the beginning of every SQLite2 database
             if ($p !== false) //the text is found - this is version 2
                 return 2;
@@ -4739,7 +4769,7 @@ class Database {
                                 $createtesttableSQL = $newSQL;
                                 break;
                             case 'change':
-                                var_dump($matches);
+                                //var_dump($matches);
                                 if (!isset($matches[6])) {
                                     $this->alterError = $errormsg . ' (change) - ' . $lang['alter_col_not_recognized'];
                                     return false;
@@ -5253,12 +5283,14 @@ class Database {
 
                     for ($y = 0; $y < sizeof($cols); $y++) {
                         $cell = $row[$cols[$y]];
-                        if ($crlf) {
-                            $cell = str_replace("\n", "", $cell);
-                            $cell = str_replace("\r", "", $cell);
+                        if (!empty($cell)) {
+                            if ($crlf) {
+                                $cell = str_replace("\n", "", $cell);
+                                $cell = str_replace("\r", "", $cell);
+                            }
+                            $cell = str_replace($field_terminate, $field_escaped . $field_terminate, $cell);
+                            $cell = str_replace($field_enclosed, $field_escaped . $field_enclosed, $cell);
                         }
-                        $cell = str_replace($field_terminate, $field_escaped . $field_terminate, $cell);
-                        $cell = str_replace($field_enclosed, $field_escaped . $field_enclosed, $cell);
                         // do not enclose NULLs
                         if ($cell == NULL)
                             echo $null;
@@ -5385,7 +5417,8 @@ class GetParameters {
 
     public function getURL(array $assoc = array(), $html = true, $prefix = '?') {
         $arg_sep = ($html ? '&amp;' : '&');
-        $assoc['page'] = 'explorer';
+        $assoc['section'] = 'explorer';
+        $assoc['page'] = 'sqlite-db';
         return $prefix . http_build_query(array_merge($this->_fields, $assoc), '', $arg_sep);
     }
 
@@ -5423,12 +5456,13 @@ class GetParameters {
             $url = $this->getURL(array_merge($assoc, array('message' => md5($message))), false);
         } else
             $url = $this->getURL($assoc, false);
-
+        //$url = str_replace('§ion=', 'section=', $url);
         $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 'https' : 'http');
-
+        //var_dump($assoc); var_dump($url);die();
+        echo '<script>/*alert("' . $url . '");*/window.location.href = "' . $url . '";</script>';
         //header("Location: " . $protocol . "://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'] . $url, true, 302);
-        wp_redirect($url);
-        exit;
+        //wp_redirect($url);
+        //exit;
     }
 
 }
@@ -5568,7 +5602,7 @@ function getInternalResource($res) {
     .databaseList select{
         max-width:200px
     }
-    
+
     .confirm{
         border-color:#03F;
         border-width:1px;

@@ -32,7 +32,12 @@ if (!defined('ABSPATH')) { // Oh, you are not WordPress!
  * define('USE_MYSQL', false);
  * </code>
  */
+
+require_once('constant.php');
+
 if (defined('USE_MYSQL') && USE_MYSQL)
+    return;
+if (!defined('DATABASE_TYPE') || (defined('DATABASE_TYPE') && DATABASE_TYPE != 'sqlite'))
     return;
 
 function pdo_log_error($message, $data = null) {
@@ -73,6 +78,11 @@ if (!extension_loaded('pdo_sqlite')) {
     pdo_log_error('PDO Driver for SQLite is missing.', 'Your PHP installtion appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.');
 }
 
+// If the SQLite3 class does not exist, then the module cannot be activated.
+if ( ! class_exists( 'SQLite3' ) ) {
+    pdo_log_error('SQLite3 Class is missing.', 'Your PHP installtion appears not to have the right PDO drivers loaded. These are required for this version of WordPress and the type of database you have specified.');
+}
+
 /*
  * Notice:
  * Your scripts have the permission to create directories or files on your server.
@@ -81,46 +91,7 @@ if (!extension_loaded('pdo_sqlite')) {
  * define('DB_FILE', 'database_file_name');
  */
 
-/*
- * PDODIR is SQLite Integration installed directory.
- */
-if (defined('WP_PLUGIN_DIR')) {
-    define('PDODIR', WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
-} else {
-    if (defined('WP_CONTENT_DIR')) {
-        $tmp = str_replace('/', DIRECTORY_SEPARATOR, WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
-    } else {
-        $tmp = str_replace('/', DIRECTORY_SEPARATOR, ABSPATH . 'wp-content' . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'sqlite-db' . DIRECTORY_SEPARATOR);
-    }
-    define('PDODIR', $tmp);
-}
 
-/*
- * FQDBDIR is a directory where the sqlite database file is placed.
- * If DB_DIR is defined, it is used as FQDBDIR.
- */
-if (defined('DB_DIR')) {
-    if (substr(DB_DIR, -1, 1) != DIRECTORY_SEPARATOR) {
-        define('FQDBDIR', DB_DIR . DIRECTORY_SEPARATOR);
-    } else {
-        define('FQDBDIR', DB_DIR);
-    }
-} else {
-    if (defined('WP_CONTENT_DIR')) {
-        define('FQDBDIR', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
-    } else {
-        define('FQDBDIR', ABSPATH . 'wp-content' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR);
-    }
-}
-/*
- * FQDB is a database file name. If DB_FILE is defined, it is used
- * as FQDB.
- */
-if (defined('DB_FILE')) {
-    define('FQDB', FQDBDIR . DB_FILE);
-} else {
-    define('FQDB', FQDBDIR . '.ht.sqlite');
-}
 
-require_once PDODIR . 'class' . DIRECTORY_SEPARATOR . 'pdodb.php';
+require_once SQLITE_DB_PATH . 'class' . DIRECTORY_SEPARATOR . 'pdodb.php';
 ?>
