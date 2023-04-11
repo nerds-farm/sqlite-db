@@ -760,7 +760,7 @@ if ($auth->isAuthorized()) {
                 $arr = scandir($directory);
             $databases = array();
             $j = 0;
-            for ($i = 0; $i < sizeof($arr); $i++) { //iterate through all the files in the databases
+            for ($i = 0; $i < count($arr); $i++) { //iterate through all the files in the databases
                 if ($subdirectories === false)
                     $arr[$i] = $directory . DIRECTORY_SEPARATOR . $arr[$i];
 
@@ -796,7 +796,7 @@ if ($auth->isAuthorized()) {
             exit();
         }
     } else {
-        for ($i = 0; $i < sizeof($databases); $i++) {
+        for ($i = 0; $i < count($databases); $i++) {
             if (!file_exists($databases[$i]['path'])) {
                 // the file does not exist and will be created when clicked, if permissions allow to
                 $databases[$i]['writable'] = is_writable(dirname($databases[$i]['path']));
@@ -1161,7 +1161,7 @@ if ($auth->isAuthorized()) {
                 $j = 0;
                 $whereExpr = array();
                 //var_dump($_POST);
-                for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                for ($i = 0; $i < count($tableInfo); $i++) {
                     if (isset($_POST['field_' . $i . '_operator'])) {
                         $field = $tableInfo[$i][1];
                         $operator = $_POST['field_' . $i . '_operator'];
@@ -1196,9 +1196,9 @@ if ($auth->isAuthorized()) {
                     }
                 }
                 $searchWhere = '';
-                if (sizeof($whereExpr) > 0) {
+                if (count($whereExpr) > 0) {
                     $searchWhere .= " WHERE " . $whereExpr[0];
-                    for ($i = 1; $i < sizeof($whereExpr); $i++) {
+                    for ($i = 1; $i < count($whereExpr); $i++) {
                         $searchWhere .= " AND " . $whereExpr[$i];
                     }
                 }
@@ -1227,7 +1227,7 @@ if ($auth->isAuthorized()) {
                         $query_cols = "";
                         $query_vals = "";
                         $all_default = true;
-                        for ($j = 0; $j < sizeof($tableInfo); $j++) {
+                        for ($j = 0; $j < count($tableInfo); $j++) {
                             $null = isset($_POST[$j . "_null"][$i]);
                             $type = strtoupper($tableInfo[$j]['type']);
                             $typeAffinity = get_type_affinity($type);
@@ -1300,35 +1300,37 @@ if ($auth->isAuthorized()) {
                 $pks = json_decode($_GET['pk']);
 
                 $query = "DELETE FROM " . $db->quote_id($target_table) . " WHERE (" . $db->wherePK($target_table, json_decode($pks[0])) . ")";
-                for ($i = 1; $i < sizeof($pks); $i++) {
+                for ($i = 1; $i < count($pks); $i++) {
                     $query .= " OR (" . $db->wherePK($target_table, json_decode($pks[$i])) . ")";
                 }
                 $result = $db->query($query);
                 if ($result === false)
                     $completed = $db->getError(true);
                 else
-                    $completed = sizeof($pks) . " " . $lang['rows'] . " " . $lang['deleted'] . ".<br/><span style='font-size:11px;'>" . htmlencode($query) . "</span>";
+                    $completed = count($pks) . " " . $lang['rows'] . " " . $lang['deleted'] . ".<br/><span style='font-size:11px;'>" . htmlencode($query) . "</span>";
                 $params->redirect(array('action' => 'row_view'), $completed);
                 break;
 
             //- Edit row (=row_edit)
             case "row_edit":
                 $pks = json_decode($_GET['pk']);
+                //var_dump($pks); die();
                 $z = 0;
 
                 $tableInfo = $db->getTableInfo($target_table);
 
+                $count = empty($pks) ? 0 : count($pks);
                 if (isset($_POST['new_row']))
                     $completed = "";
-                else
-                    $completed = sizeof($pks) . " " . $lang['rows'] . " " . $lang['affected'] . ".<br/><br/>";
-
-                for ($i = 0; $i < sizeof($pks); $i++) {
+                else {
+                    $completed = $count . " " . $lang['rows'] . " " . $lang['affected'] . ".<br/><br/>";
+                }
+                for ($i = 0; $i < $count; $i++) {
                     if (isset($_POST['new_row'])) {
                         $query_cols = "";
                         $query_vals = "";
                         $all_default = true;
-                        for ($j = 0; $j < sizeof($tableInfo); $j++) {
+                        for ($j = 0; $j < count($tableInfo); $j++) {
                             $null = isset($_POST[$j . "_null"][$i]);
                             $type = strtoupper($tableInfo[$j]['type']);
                             $typeAffinity = get_type_affinity($type);
@@ -1398,7 +1400,7 @@ if ($auth->isAuthorized()) {
                         $z++;
                     } else {
                         $query = "UPDATE " . $db->quote_id($target_table) . " SET ";
-                        for ($j = 0; $j < sizeof($tableInfo); $j++) {
+                        for ($j = 0; $j < count($tableInfo); $j++) {
                             $type = strtoupper($tableInfo[$j]['type']);
                             $function = $_POST["function_" . $j][$i];
                             $null = isset($_POST[$j . "_null"][$i]);
@@ -1444,7 +1446,7 @@ if ($auth->isAuthorized()) {
                     }
                     $completed .= "<span style='font-size:11px;'>" . htmlencode($query) . "</span><br/>";
                 }
-                if ($error)
+                if (!empty($error))
                     $completed = $db->getError(true);
                 elseif (isset($_POST['new_row']))
                     $completed = $z . " " . $lang['rows'] . " " . $lang['inserted'] . ".<br/><br/>" . $completed;
@@ -1530,7 +1532,7 @@ if ($auth->isAuthorized()) {
             case "column_delete":
                 $pks = explode(":", $_GET['pk']);
                 $query = "ALTER TABLE " . $db->quote_id($target_table) . ' DROP ' . $db->quote_id($pks[0]);
-                for ($i = 1; $i < sizeof($pks); $i++) {
+                for ($i = 1; $i < count($pks); $i++) {
                     $query .= ", DROP " . $db->quote_id($pks[$i]);
                 }
                 $result = $db->query($query);
@@ -1545,7 +1547,7 @@ if ($auth->isAuthorized()) {
             case "primarykey_add":
                 $pks = explode(":", $_GET['pk']);
                 $query = "ALTER TABLE " . $db->quote_id($target_table) . ' ADD PRIMARY KEY (' . $db->quote_id($pks[0]);
-                for ($i = 1; $i < sizeof($pks); $i++) {
+                for ($i = 1; $i < count($pks); $i++) {
                     $query .= ", " . $db->quote_id($pks[$i]);
                 }
                 $query .= ")";
@@ -1993,7 +1995,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
         case "table_create":
             $query = "SELECT name FROM sqlite_master WHERE type='table' AND name=" . $db->quote($_GET['tablename']);
             $results = $db->selectArray($query);
-            if (sizeof($results) > 0)
+            if (count($results) > 0)
                 $exists = true;
             else
                 $exists = false;
@@ -2010,7 +2012,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo $params->getForm(array('action' => 'table_create', 'confirm' => '1'));
                 echo "<input type='hidden' name='tablename' value='" . htmlencode($name) . "'/>";
                 echo "<input type='hidden' name='rows' value='" . $num . "'/>";
-                echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                 echo "<tr>";
                 $headings = array($lang['fld'], $lang['type'], $lang['prim_key']);
                 if ($db->getType() != "SQLiteDatabase")
@@ -2059,7 +2061,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo $params->getLink(array(), $lang['cancel']);
                 echo "</td>";
                 echo "</tr>";
-                echo "</table>";
+                echo "</table></div>";
                 echo "</form>";
                 if ($db->getType() != "SQLiteDatabase")
                     echo "<script type='text/javascript'>window.onload=initAutoincrement;</script>";
@@ -2076,12 +2078,12 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     if (!isset($_SESSION[COOKIENAME . 'query_history']))
                         $_SESSION[COOKIENAME . 'query_history'] = array();
                     $_SESSION[COOKIENAME . 'query_history'][md5(strtolower($queryStr))] = $queryStr;
-                    if (sizeof($_SESSION[COOKIENAME . 'query_history']) > $maxSavedQueries)
+                    if (count($_SESSION[COOKIENAME . 'query_history']) > $maxSavedQueries)
                         array_shift($_SESSION[COOKIENAME . 'query_history']);
                 }
                 $query = explode_sql($delimiter, $queryStr); //explode the query string into individual queries based on the delimiter
 
-                for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
+                for ($i = 0; $i < count($query); $i++) { //iterate through the queries exploded by the delimiter
                     if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
                         $queryTimer = microtime(true);
                         $table_result = $db->query($query[$i]);
@@ -2093,11 +2095,11 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                         }
                         echo "</div><br/>";
                         if ($row = $db->fetch($table_result, 'num')) {
-                            for ($j = 0; $j < sizeof($row); $j++)
+                            for ($j = 0; $j < count($row); $j++)
                                 $headers[$j] = $db->getColumnName($table_result, $j);
-                            echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                            echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                             echo "<tr>";
-                            for ($j = 0; $j < sizeof($headers); $j++) {
+                            for ($j = 0; $j < count($headers); $j++) {
                                 echo "<td class='tdheader'>";
                                 echo htmlencode($headers[$j]);
                                 echo "</td>";
@@ -2107,7 +2109,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                             for (; $rowCount == 0 || $row = $db->fetch($table_result, 'num'); $rowCount++) {
                                 $tdWithClass = "<td class='td" . ($rowCount % 2 ? "1" : "2") . "'>";
                                 echo "<tr>";
-                                for ($z = 0; $z < sizeof($headers); $z++) {
+                                for ($z = 0; $z < count($headers); $z++) {
                                     echo $tdWithClass;
                                     if ($row[$z] === "")
                                         echo "&nbsp;";
@@ -2120,7 +2122,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                                 echo "</tr>";
                             }
                             $queryTimer = microtime(true) - $queryTimer;
-                            echo "</table><br/><br/>";
+                            echo "</table></div><br/><br/>";
 
                             if ($table_result !== NULL && $table_result !== false) {
                                 echo "<div class='confirm' style='margin-bottom: 2em'>";
@@ -2144,7 +2146,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
             echo "<fieldset>";
             echo "<legend><b>" . sprintf($lang['run_sql'], htmlencode($db->getName())) . "</b></legend>";
             echo $params->getForm(array('action' => 'table_sql'));
-            if (isset($_SESSION[COOKIENAME . 'query_history']) && sizeof($_SESSION[COOKIENAME . 'query_history']) > 0) {
+            if (isset($_SESSION[COOKIENAME . 'query_history']) && count($_SESSION[COOKIENAME . 'query_history']) > 0) {
                 echo "<b>" . $lang['recent_queries'] . "</b><ul>";
                 foreach ($_SESSION[COOKIENAME . 'query_history'] as $key => $value)
                     echo "<li><a onclick='sqleditorSetValue(this.textContent); return false;' href='#'>" . htmlencode($value) . "</a></li>";
@@ -2158,7 +2160,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
             echo $lang['fields'] . "<br/>";
             echo "<select multiple='multiple' style='width:100%;' id='fieldcontainer'>";
             $tableInfo = $db->getTableInfo($target_table);
-            for ($i = 0; $i < sizeof($tableInfo); $i++) {
+            for ($i = 0; $i < count($tableInfo); $i++) {
                 echo "<option value='" . htmlencode($tableInfo[$i][1]) . "'>" . htmlencode($tableInfo[$i][1]) . "</option>";
             }
             echo "</select>";
@@ -2313,7 +2315,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
 
                 echo $params->getForm(array('action' => 'table_search', 'confirm' => '1'));
 
-                echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                 echo "<tr>";
                 echo "<td class='tdheader'>" . $lang['fld'] . "</td>";
                 echo "<td class='tdheader'>" . $lang['type'] . "</td>";
@@ -2321,7 +2323,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo "<td class='tdheader'>" . $lang['val'] . "</td>";
                 echo "</tr>";
 
-                for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                for ($i = 0; $i < count($tableInfo); $i++) {
                     $field = $tableInfo[$i][1];
                     $type = $tableInfo[$i]['type'];
                     $typeAffinity = get_type_affinity($type);
@@ -2376,7 +2378,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo "<input type='submit' value='" . $lang['srch'] . "' class='btn'/>";
                 echo "</td>";
                 echo "</tr>";
-                echo "</table>";
+                echo "</table></div>";
                 echo "</form>";
 
                 break;
@@ -2530,18 +2532,18 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 }
 
                 $tableInfo = $db->getTableInfo($target_table);
-                $pkFirstCol = sizeof($tableInfo) + 1;
+                $pkFirstCol = count($tableInfo) + 1;
                 //- Table view
                 if (!isset($_SESSION[COOKIENAME . 'viewtype']) || $_SESSION[COOKIENAME . 'viewtype'] == "table") {
                     echo $params->getForm(array('action' => 'row_editordelete'), 'post', false, 'checkForm');
-                    echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                    echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                     echo "<tr>";
                     echo "<td colspan='3' class='tdheader' style='text-align:center'>";
                     echo "<a href='" . $params->getURL(array('action' => $get_action, 'fulltexts' => ($params->fulltexts ? 0 : 1))) . "' title='" . $lang[($params->fulltexts ? 'no_full_texts' : 'full_texts')] . "'>";
                     echo "<b>&" . ($params->fulltexts ? 'r' : 'l') . "arr;</b>&nbsp;T&nbsp;<b>&" . ($params->fulltexts ? 'l' : 'r') . "arr;</b></a>";
                     echo "</td>";
 
-                    for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                    for ($i = 0; $i < count($tableInfo); $i++) {
                         echo "<td class='tdheader'>";
                         if (isset($_SESSION[COOKIENAME . 'sortRows']))
                             $orderTag = ($_SESSION[COOKIENAME . 'sortRows'] == $tableInfo[$i]['name'] && $_SESSION[COOKIENAME . 'orderRows'] == "ASC") ? "DESC" : "ASC";
@@ -2584,7 +2586,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                         } else {
                             echo "<td class='td" . ($i % 2 ? "1" : "2") . "' colspan='3'></td>";
                         }
-                        for ($j = 0; $j < sizeof($tableInfo); $j++) {
+                        for ($j = 0; $j < count($tableInfo); $j++) {
                             $typeAffinity = get_type_affinity($tableInfo[$j]['type']);
                             if ($typeAffinity == "INTEGER" || $typeAffinity == "REAL" || $typeAffinity == "NUMERIC")
                                 echo $tdWithClass;
@@ -2609,7 +2611,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                         }
                         echo "</tr>";
                     }
-                    echo "</table>";
+                    echo "</table></div>";
                     if ($target_table_type == 'table' && $db->isWritable() && $db->isDirWritable()) {
                         echo "<a onclick='checkAll()'>" . $lang['chk_all'] . "</a> / <a onclick='uncheckAll()'>" . $lang['unchk_all'] . "</a> <i>" . $lang['with_sel'] . ":</i> ";
                         echo "<select name='type'>";
@@ -2623,7 +2625,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     //- Chart view
                     if (!isset($_SESSION[COOKIENAME . $target_table . 'chartlabels'])) {
                         // No label-column set. Try to pick a text-column as label-column.
-                        for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                        for ($i = 0; $i < count($tableInfo); $i++) {
                             if (get_type_affinity($tableInfo[$i]['type']) == 'TEXT') {
                                 $_SESSION[COOKIENAME . $target_table . 'chartlabels'] = $i;
                                 break;
@@ -2639,7 +2641,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                         // If not possible, pick the first column that is not the label-column.
 
                         $potential_value_column = null;
-                        for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                        for ($i = 0; $i < count($tableInfo); $i++) {
                             if ($potential_value_column === null && $i != $_SESSION[COOKIENAME . $target_table . 'chartlabels'])
                             // the first column (of any type) that is not the label-column
                                 $potential_value_column = $i;
@@ -2744,7 +2746,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     echo "</select>";
                     echo "<br/><br/>";
                     echo $lang['lbl'] . ": <select name='chartlabels'>";
-                    for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                    for ($i = 0; $i < count($tableInfo); $i++) {
                         if (isset($_SESSION[COOKIENAME . $target_table . 'chartlabels']) && $_SESSION[COOKIENAME . $target_table . 'chartlabels'] == $i)
                             echo "<option value='" . $i . "' selected='selected'>" . htmlencode($tableInfo[$i]['name']) . "</option>";
                         else
@@ -2753,7 +2755,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     echo "</select>";
                     echo "<br/><br/>";
                     echo $lang['val'] . ": <select name='chartvalues'>";
-                    for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                    for ($i = 0; $i < count($tableInfo); $i++) {
                         if (isset($_SESSION[COOKIENAME . $target_table . 'chartvalues']) && $_SESSION[COOKIENAME . $target_table . 'chartvalues'] == $i)
                             echo "<option value='" . $i . "' selected='selected'>" . htmlencode($tableInfo[$i]['name']) . "</option>";
                         else
@@ -2808,7 +2810,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
             for ($j = 0; $j < $num; $j++) {
                 if ($j > 0)
                     echo "<label><input type='checkbox' value='ignore' name='" . $j . ":ignore' id='row_" . $j . "_ignore' checked='checked'/> " . $lang['ignore'] . "</label><br/>";
-                echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                 echo "<tr>";
                 echo "<td class='tdheader'>" . $lang['fld'] . "</td>";
                 echo "<td class='tdheader'>" . $lang['type'] . "</td>";
@@ -2817,7 +2819,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo "<td class='tdheader'>" . $lang['val'] . "</td>";
                 echo "</tr>";
 
-                for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                for ($i = 0; $i < count($tableInfo); $i++) {
                     $field = $tableInfo[$i]['name'];
                     $type = strtoupper($tableInfo[$i]['type']);
                     $typeAffinity = get_type_affinity($type);
@@ -2868,7 +2870,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo "<input type='submit' value='" . $lang['insert'] . "' class='btn'/>";
                 echo "</td>";
                 echo "</tr>";
-                echo "</table><br/>";
+                echo "</table></div><br/>";
             }
             echo "</form>";
             break;
@@ -2893,11 +2895,11 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     $tableInfo = $db->getTableInfo($target_table);
                     $primary_key = $db->getPrimaryKey($target_table);
 
-                    for ($j = 0; $j < sizeof($pks); $j++) {
+                    for ($j = 0; $j < count($pks); $j++) {
                         $query = "SELECT * FROM " . $db->quote_id($target_table) . " WHERE " . $db->wherePK($target_table, json_decode($pks[$j]));
                         $result1 = $db->select($query, 'num');
 
-                        echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                        echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                         echo "<tr>";
                         echo "<td class='tdheader'>" . $lang['fld'] . "</td>";
                         echo "<td class='tdheader'>" . $lang['type'] . "</td>";
@@ -2906,7 +2908,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                         echo "<td class='tdheader'>" . $lang['val'] . "</td>";
                         echo "</tr>";
 
-                        for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                        for ($i = 0; $i < count($tableInfo); $i++) {
                             $field = $tableInfo[$i]['name'];
                             $type = strtoupper($tableInfo[$i]['type']);
                             $typeAffinity = get_type_affinity($type);
@@ -2963,7 +2965,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                         echo $params->getLink(array('action' => 'row_view'), $lang['cancel']);
                         echo "</td>";
                         echo "</tr>";
-                        echo "</table>";
+                        echo "</table></div>";
                         echo "<br/>";
                     }
                     echo "</form>";
@@ -2985,7 +2987,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
             $tableInfo = $db->getTableInfo($target_table);
 
             echo $params->getForm(array('action' => 'column_confirm'), 'get', false, 'checkForm');
-            echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+            echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
             echo "<tr>";
             if ($target_table_type == 'table' && $db->isWritable() && $db->isDirWritable())
                 echo "<td colspan='3'></td>";
@@ -2999,7 +3001,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
 
             $noPrimaryKey = true;
 
-            for ($i = 0; $i < sizeof($tableInfo); $i++) {
+            for ($i = 0; $i < count($tableInfo); $i++) {
                 $colVal = $tableInfo[$i][0];
                 $fieldVal = $tableInfo[$i][1];
                 $typeVal = $tableInfo[$i]['type'];
@@ -3057,7 +3059,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo "</tr>";
             }
 
-            echo "</table>";
+            echo "</table></div>";
             if ($target_table_type == 'table' && $db->isWritable() && $db->isDirWritable()) {
                 echo "<a onclick='checkAll()'>" . $lang['chk_all'] . "</a> / <a onclick='uncheckAll()'>" . $lang['unchk_all'] . "</a> <i>" . $lang['with_sel'] . ":</i> ";
                 echo "<select name='action2'>";
@@ -3090,9 +3092,9 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo "<br/><hr/><br/>";
                 $query = "PRAGMA index_list(" . $db->quote_id($target_table) . ")";
                 $result = $db->selectArray($query);
-                if (sizeof($result) > 0) {
+                if (count($result) > 0) {
                     echo "<h2>" . $lang['indexes'] . ":</h2>";
-                    echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                    echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                     echo "<tr>";
                     echo "<td colspan='1'>";
                     echo "</td>";
@@ -3102,7 +3104,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     echo "<td class='tdheader'>" . $lang['col'] . " #</td>";
                     echo "<td class='tdheader'>" . $lang['fld'] . "</td>";
                     echo "</tr>";
-                    for ($i = 0; $i < sizeof($result); $i++) {
+                    for ($i = 0; $i < count($result); $i++) {
                         if ($result[$i]['unique'] == 0)
                             $unique = $lang['no'];
                         else
@@ -3110,7 +3112,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
 
                         $query = "PRAGMA index_info(" . $db->quote_id($result[$i]['name']) . ")";
                         $info = $db->selectArray($query);
-                        $span = sizeof($info);
+                        $span = count($info);
 
                         $tdWithClass = "<td class='td" . ($i % 2 ? "1" : "2") . "'>";
                         $tdWithClassLeft = "<td class='td" . ($i % 2 ? "1" : "2") . "' style='text-align:left;'>";
@@ -3141,22 +3143,22 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                             echo "</tr>";
                         }
                     }
-                    echo "</table><br/><br/>";
+                    echo "</table></div><br/><br/>";
                 }
 
                 $query = "SELECT * FROM sqlite_master WHERE type='trigger' AND tbl_name=" . $db->quote($target_table) . " ORDER BY name";
                 $result = $db->selectArray($query);
                 //print_r($result);
-                if (sizeof($result) > 0) {
+                if (count($result) > 0) {
                     echo "<h2>" . $lang['triggers'] . ":</h2>";
-                    echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                    echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                     echo "<tr>";
                     echo "<td colspan='1'>";
                     echo "</td>";
                     echo "<td class='tdheader'>" . $lang['name'] . "</td>";
                     echo "<td class='tdheader'>" . $lang['sql'] . "</td>";
                     echo "</tr>";
-                    for ($i = 0; $i < sizeof($result); $i++) {
+                    for ($i = 0; $i < count($result); $i++) {
                         $tdWithClass = "<td class='td" . ($i % 2 ? "1" : "2") . "'>";
                         echo "<tr>";
                         echo $tdWithClass;
@@ -3169,7 +3171,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                         echo htmlencode($result[$i]['sql']);
                         echo "</td>";
                     }
-                    echo "</table><br/><br/>";
+                    echo "</table></div><br/><br/>";
                 }
 
                 if ($db->isWritable() && $db->isDirWritable()) {
@@ -3200,7 +3202,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 $name = $_GET['table'];
                 echo $params->getForm(array('action' => 'column_create', 'confirm' => '1'));
                 echo "<input type='hidden' name='rows' value='" . $num . "'/>";
-                echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                 echo "<tr>";
                 $headings = array($lang["fld"], $lang["type"], $lang["prim_key"]);
                 if ($db->getType() != "SQLiteDatabase")
@@ -3250,7 +3252,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo $params->getLink(array('action' => 'column_view'), $lang['cancel']);
                 echo "</td>";
                 echo "</tr>";
-                echo "</table>";
+                echo "</table></div>";
                 echo "</form>";
             }
             break;
@@ -3264,7 +3266,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
             else
                 $pks = array();
 
-            if (sizeof($pks) == 0) { //nothing was selected so show an error
+            if (count($pks) == 0) { //nothing was selected so show an error
                 echo "<div class='confirm'>";
                 echo $lang['err'] . ": " . $lang['no_sel'];
                 echo "</div>";
@@ -3273,7 +3275,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
             } else {
                 $str = $pks[0];
                 $pkVal = $pks[0];
-                for ($i = 1; $i < sizeof($pks); $i++) {
+                for ($i = 1; $i < count($pks); $i++) {
                     $str .= ", " . $pks[$i];
                     $pkVal .= ":" . $pks[$i];
                 }
@@ -3298,7 +3300,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
             else {
                 $tableInfo = $db->getTableInfo($target_table);
 
-                for ($i = 0; $i < sizeof($tableInfo); $i++) {
+                for ($i = 0; $i < count($tableInfo); $i++) {
                     if ($tableInfo[$i][1] == $_GET['pk']) {
                         $colVal = $tableInfo[$i][0];
                         $fieldVal = $tableInfo[$i][1];
@@ -3316,7 +3318,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     $name = $target_table;
                     echo $params->getForm(array('action' => 'column_edit', 'confirm' => '1'));
                     echo "<input type='hidden' name='oldvalue' value='" . htmlencode($_GET['pk']) . "'/>";
-                    echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                    echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                     echo "<tr>";
                     //$headings = array("Field", "Type", "Primary Key", "Autoincrement", "Not NULL", "Default Value");
                     $headings = array($lang["fld"], $lang["type"]);
@@ -3373,7 +3375,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     echo $params->getLink(array('action' => 'column_view'), $lang['cancel']);
                     echo "</td>";
                     echo "</tr>";
-                    echo "</table>";
+                    echo "</table></div>";
                     echo "</form>";
                 }
             }
@@ -3465,7 +3467,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 for ($i = 0; $i < $num; $i++) {
                     echo "<select name='" . $i . "_field'>";
                     echo "<option value=''>--" . $lang['ignore'] . "--</option>";
-                    for ($j = 0; $j < sizeof($tableInfo); $j++)
+                    for ($j = 0; $j < count($tableInfo); $j++)
                         echo "<option value='" . htmlencode($tableInfo[$j][1]) . "'>" . htmlencode($tableInfo[$j][1]) . "</option>";
                     echo "</select> ";
                     echo "<select name='" . $i . "_order'>";
@@ -3522,10 +3524,10 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset
 
         $tables = $db->getTables(true, false, $_SESSION[COOKIENAME . 'sortTables'], $_SESSION[COOKIENAME . 'orderTables']);
 
-        if (sizeof($tables) == 0)
+        if (count($tables) == 0)
             echo $lang['no_tbl'] . "<br/><br/>";
         else {
-            echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+            echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
             echo "<tr>";
 
             echo "<td class='tdheader'>";
@@ -3623,10 +3625,10 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset
                 echo "</tr>";
             }
             echo "<tr>";
-            echo "<td class='tdheader' colspan='12'>" . sizeof($tables) . " " . $lang['total'] . "</td>";
+            echo "<td class='tdheader' colspan='12'>" . count($tables) . " " . $lang['total'] . "</td>";
             echo "<td class='tdheader' colspan='1' style='text-align:right;'>" . $totalRecords . ($skippedTables ? " " . $params->getLink(array('forceCount' => '1'), '+ ?') : "") . "</td>";
             echo "</tr>";
-            echo "</table>";
+            echo "</table></div>";
             echo "<br/>";
             if ($skippedTables)
                 echo "<div class='confirm' style='margin-bottom:20px;'>" . sprintf($lang["counting_skipped"], "<a href='" . $params->getURL(array('forceCount' => '1')) . "'>", "</a>") . "</div>";
@@ -3660,12 +3662,12 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset
                 if (!isset($_SESSION[COOKIENAME . 'query_history']))
                     $_SESSION[COOKIENAME . 'query_history'] = array();
                 $_SESSION[COOKIENAME . 'query_history'][md5(strtolower($queryStr))] = $queryStr;
-                if (sizeof($_SESSION[COOKIENAME . 'query_history']) > $maxSavedQueries)
+                if (count($_SESSION[COOKIENAME . 'query_history']) > $maxSavedQueries)
                     array_shift($_SESSION[COOKIENAME . 'query_history']);
             }
             $query = explode_sql($delimiter, $queryStr); //explode the query string into individual queries based on the delimiter
 
-            for ($i = 0; $i < sizeof($query); $i++) { //iterate through the queries exploded by the delimiter
+            for ($i = 0; $i < count($query); $i++) { //iterate through the queries exploded by the delimiter
                 if (str_replace(" ", "", str_replace("\n", "", str_replace("\r", "", $query[$i]))) != "") { //make sure this query is not an empty string
                     $queryTimer = microtime(true);
                     $table_result = $db->query($query[$i]);
@@ -3677,11 +3679,11 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset
                     }
                     echo "</div><br/>";
                     if ($row = $db->fetch($table_result, 'num')) {
-                        for ($j = 0; $j < sizeof($row); $j++)
+                        for ($j = 0; $j < count($row); $j++)
                             $headers[$j] = $db->getColumnName($table_result, $j);
-                        echo "<table border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
+                        echo "<div class='table-wrapper'><table  border='0' cellpadding='2' cellspacing='1' class='viewTable wp-list-table widefat striped table-view-list'>";
                         echo "<tr>";
-                        for ($j = 0; $j < sizeof($headers); $j++) {
+                        for ($j = 0; $j < count($headers); $j++) {
                             echo "<td class='tdheader'>";
                             echo htmlencode($headers[$j]);
                             echo "</td>";
@@ -3691,7 +3693,7 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset
                         for (; $rowCount == 0 || $row = $db->fetch($table_result, 'num'); $rowCount++) {
                             $tdWithClass = "<td class='td" . ($rowCount % 2 ? "1" : "2") . "'>";
                             echo "<tr>";
-                            for ($z = 0; $z < sizeof($headers); $z++) {
+                            for ($z = 0; $z < count($headers); $z++) {
                                 echo $tdWithClass;
                                 if ($row[$z] === "")
                                     echo "&nbsp;";
@@ -3704,7 +3706,7 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset
                             echo "</tr>";
                         }
                         $queryTimer = microtime(true) - $queryTimer;
-                        echo "</table><br/><br/>";
+                        echo "</table></div><br/><br/>";
 
                         if ($table_result !== NULL && $table_result !== false) {
                             echo "<div class='confirm' style='margin-bottom: 2em'>";
@@ -3728,7 +3730,7 @@ if (!$target_table && !isset($_GET['confirm']) && (!isset($get_action) || (isset
         echo "<fieldset>";
         echo "<legend><b>" . sprintf($lang['run_sql'], htmlencode($db->getName())) . "</b></legend>";
         echo $params->getForm(array('view' => 'sql'));
-        if (isset($_SESSION[COOKIENAME . 'query_history']) && sizeof($_SESSION[COOKIENAME . 'query_history']) > 0) {
+        if (isset($_SESSION[COOKIENAME . 'query_history']) && count($_SESSION[COOKIENAME . 'query_history']) > 0) {
             echo "<b>" . $lang['recent_queries'] . "</b><ul>";
             foreach ($_SESSION[COOKIENAME . 'query_history'] as $key => $value) {
                 echo "<li><a onclick='sqleditorSetValue(this.textContent); return false;' href='#'>" . htmlencode($value) . "</a></li>";
@@ -4165,7 +4167,7 @@ class Database {
     public function print_db_list() {
         global $databases, $lang, $params, $currentDB;
         echo "<fieldset class='databaseList'><legend><b>" . $lang['db_ch'] . "</b></legend>";
-        if (sizeof($databases) < 10) { //if there aren't a lot of databases, just show them as a list of links instead of drop down menu
+        if (count($databases) < 10) { //if there aren't a lot of databases, just show them as a list of links instead of drop down menu
             $i = 0;
             foreach ($databases as $database) {
                 $i++;
@@ -4178,7 +4180,7 @@ class Database {
                 echo "&nbsp;&nbsp;";
                 echo $params->getLink(array('download' => $database['path'], 'table' => null, 'token' => $_SESSION[COOKIENAME . 'token']), '[&darr;]', '', $lang['backup']);
 
-                if ($i < sizeof($databases))
+                if ($i < count($databases))
                     echo "<br/>";
             }
         } else { //there are a lot of databases - show a drop down menu
@@ -4292,7 +4294,7 @@ class Database {
                 . "ORDER BY " . $this->quote_id($orderBy) . " " . $orderDirection;
         $result = $this->selectArray($query);
         $list = array();
-        for ($i = 0; $i < sizeof($result); $i++) {
+        for ($i = 0; $i < count($result); $i++) {
             $list[$result[$i]['name']] = $result[$i]['type'];
         }
         return $list;
@@ -4568,13 +4570,13 @@ class Database {
         if ($alterdefs != '') {
             $recreateQueries = array();
             $resultArr = $this->selectArray("SELECT sql,name,type FROM sqlite_master WHERE tbl_name = " . $this->quote($table));
-            if (sizeof($resultArr) < 1) {
+            if (count($resultArr) < 1) {
                 $this->alterError = $errormsg . sprintf($lang['tbl_inexistent'], htmlencode($table));
                 if ($debug)
                     $this->debugOutput .= "ERROR: unknown table<hr /><br />";
                 return false;
             }
-            for ($i = 0; $i < sizeof($resultArr); $i++) {
+            for ($i = 0; $i < count($resultArr); $i++) {
                 $row = $resultArr[$i];
                 if ($row['type'] != 'table' && $row['type'] != 'view') {
                     if ($row['sql'] != '') {
@@ -4842,7 +4844,7 @@ class Database {
                                 // we want to drop the primary key
                                 if ($debug)
                                     $this->debugOutput .= "DROP";
-                                if (sizeof($primarykey) == 1) {
+                                if (count($primarykey) == 1) {
                                     // if not compound primary key, might be a column constraint -> try removal
                                     $column = $primarykey[0];
                                     if ($debug)
@@ -5252,22 +5254,22 @@ class Database {
 
         $query = "SELECT * FROM sqlite_master WHERE type='table' or type='view' ORDER BY type DESC";
         $result = $this->selectArray($query);
-        for ($i = 0; $i < sizeof($result); $i++) {
+        for ($i = 0; $i < count($result); $i++) {
             $valid = false;
-            for ($j = 0; $j < sizeof($tables); $j++) {
+            for ($j = 0; $j < count($tables); $j++) {
                 if ($result[$i]['tbl_name'] == $tables[$j])
                     $valid = true;
             }
             if ($valid) {
                 $temp = $this->getTableInfo($result[$i]['tbl_name']);
                 $cols = array();
-                for ($z = 0; $z < sizeof($temp); $z++)
+                for ($z = 0; $z < count($temp); $z++)
                     $cols[$z] = $temp[$z][1];
                 if ($fields_in_first_row) {
-                    for ($z = 0; $z < sizeof($cols); $z++) {
+                    for ($z = 0; $z < count($cols); $z++) {
                         echo $field_enclosed . $cols[$z] . $field_enclosed;
                         // do not terminate the last column!
-                        if ($z < sizeof($cols) - 1)
+                        if ($z < count($cols) - 1)
                             echo $field_terminate;
                     }
                     echo $crlf;
@@ -5281,7 +5283,7 @@ class Database {
                     else
                         $firstRow = false;
 
-                    for ($y = 0; $y < sizeof($cols); $y++) {
+                    for ($y = 0; $y < count($cols); $y++) {
                         $cell = $row[$cols[$y]];
                         if (!empty($cell)) {
                             if ($crlf) {
@@ -5297,11 +5299,11 @@ class Database {
                         else
                             echo $field_enclosed . $cell . $field_enclosed;
                         // do not terminate the last column!
-                        if ($y < sizeof($cols) - 1)
+                        if ($y < count($cols) - 1)
                             echo $field_terminate;
                     }
                 }
-                if ($i < sizeof($result) - 1)
+                if ($i < count($result) - 1)
                     echo $crlf;
             }
         }
@@ -5329,9 +5331,9 @@ class Database {
             echo "BEGIN TRANSACTION;" . $crlf;
 
         //iterate through each table
-        for ($i = 0; $i < sizeof($result); $i++) {
+        for ($i = 0; $i < count($result); $i++) {
             $valid = false;
-            for ($j = 0; $j < sizeof($tables); $j++) {
+            for ($j = 0; $j < count($tables); $j++) {
                 if ($result[$i]['tbl_name'] == $tables[$j])
                     $valid = true;
             }
@@ -5368,13 +5370,13 @@ class Database {
                     $temp = $this->getTableInfo($result[$i]['tbl_name']);
                     $cols = array();
                     $cols_quoted = array();
-                    for ($z = 0; $z < sizeof($temp); $z++) {
+                    for ($z = 0; $z < count($temp); $z++) {
                         $cols[$z] = $temp[$z][1];
                         $cols_quoted[$z] = $this->quote_id($temp[$z][1]);
                     }
                     while ($row = $this->fetch($table_result)) {
                         $vals = array();
-                        for ($y = 0; $y < sizeof($cols); $y++) {
+                        for ($y = 0; $y < count($cols); $y++) {
                             if ($row[$cols[$y]] === NULL)
                                 $vals[$cols[$y]] = 'NULL';
                             else
@@ -5432,15 +5434,19 @@ class GetParameters {
 
     public function getForm(array $assoc = array(), $method = 'post', $upload = false, $name = '', $csrf = true) {
         $hidden = '';
+        
+        $hidden .= '<input type="hidden" name="page" value="sqlite-db" /> ';
+        $hidden .= '<input type="hidden" name="section" value="explorer" /> ';
+        
         if ($method == 'get') {
             $url = '';
             foreach (array_merge($this->_fields, $assoc) as $key => $value) {
                 if (!is_null($value))
                     $hidden .= '<input type="hidden" name="' . htmlencode($key) . '" value="' . htmlencode($value) . '" /> ';
             }
-        } else
+        } else {
             $url = $this->getURL($assoc);
-
+        }
         if ($csrf && $method == 'post')
             $hidden .= '<input type="hidden" name="token" value="' . $_SESSION[COOKIENAME . 'token'] . '" />';
 

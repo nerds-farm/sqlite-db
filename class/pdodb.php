@@ -1,5 +1,7 @@
 <?php
 
+namespace SQLiteDB;
+
 /**
  * This file defines PDODB class, which inherits wpdb class and replaces it
  * global $wpdb variable.
@@ -12,7 +14,6 @@ if (!defined('ABSPATH')) {
     echo 'Thank you, but you are not allowed to accesss this file.';
     die();
 }
-require_once SQLITE_DB_PATH . 'class' . DIRECTORY_SEPARATOR . 'pdoengine.php';
 //require_once SQLITE_DB_PATH . 'install.php';
 
 if (!defined('SAVEQUERIES')) {
@@ -28,7 +29,7 @@ if (!defined('PDO_DEBUG')) {
  * It also rewrites some methods that use mysql specific functions.
  *
  */
-class PDODB extends wpdb {
+class PDODB extends \wpdb {
 
     /**
      *
@@ -48,12 +49,16 @@ class PDODB extends wpdb {
     public function __construct() {
         register_shutdown_function(array($this, '__destruct'));
 
-        if (WP_DEBUG)
+        if (WP_DEBUG) {
             $this->show_errors();
-
+        }
+        
         $this->init_charset();
 
         $this->db_connect();
+        add_action('sqlite-db/log', [$this, 'log']);
+        add_filter('sqlite-db/query', [$this, 'fix_query']);
+        add_filter('option_gmt_offset', function ($value, $option) { return intval($value); }, 10, 2);
     }
 
     /**
@@ -66,6 +71,18 @@ class PDODB extends wpdb {
     public function __destruct() {
         return true;
     }
+    
+    public function log($statement) {
+        if (WP_DEBUG && WP_DEBUG_LOG && defined('SQLITE_LOG') && SQLITE_LOG) {
+            $log = FQDBDIR . 'sql.log';
+            $line = '['.date('Y-m-d H:i:s').'] '.$statement.PHP_EOL;
+            // Write the contents to the file, 
+            // using the FILE_APPEND flag to append the content to the end of the file
+            // and the LOCK_EX flag to prevent anyone else writing to the file at the same time
+            file_put_contents($log, $line, FILE_APPEND | LOCK_EX);
+        }
+    }
+
 
     /**
      * Method to set character set for the database.
@@ -110,7 +127,7 @@ class PDODB extends wpdb {
      *
      */
     function _weak_escape($string) {
-        return addslashes($string);
+        return empty($string) ? '' : addslashes($string);
     }
 
     /**
@@ -121,7 +138,7 @@ class PDODB extends wpdb {
      * @see wpdb::_real_escape()
      */
     function _real_escape($string) {
-        return addslashes($string);
+        return empty($string) ? '' : addslashes($string);
     }
 
     /**
@@ -184,8 +201,8 @@ class PDODB extends wpdb {
             $query = htmlspecialchars($this->last_query, ENT_QUOTES);
 
             echo '<div id="error" style="padding: 15px; background-color: #ffffdd;">
-			<p class="wpdberror"><strong>WordPress database error:</strong> ['.$str.']<br />
-			<code>'.$query.'</code></p>
+			<p class="wpdberror"><strong>WordPress database error:</strong> [' . $str . ']<br />
+			<code>' . $query . '</code></p>
 			</div>';
         }
     }
@@ -215,17 +232,55 @@ class PDODB extends wpdb {
      * @see wpdb::db_connect()
      */
     public function db_connect($allow_bail = true) {
-        if (WP_DEBUG) {
-            $this->dbh = new PDOEngine();
+
+        if ($this->dbh) {
+            return;
+        }
+        $this->init_charset();
+
+        $pdo = null;
+        if (isset($GLOBALS['@pdo'])) {
+            $pdo = $GLOBALS['@pdo'];
+        }
+
+        $includes = SQLITE_DB_PATH . 'wp-includes' . DIRECTORY_SEPARATOR;
+        $performance = true;
+
+        if ($performance) {
+            $sqlite_includes = $includes . 'sqlite' . DIRECTORY_SEPARATOR;
+            require_once $sqlite_includes . 'class-wp-sqlite-lexer.php';
+            require_once $sqlite_includes . 'class-wp-sqlite-query-rewriter.php';
+            require_once $sqlite_includes . 'class-wp-sqlite-translator.php';
+            require_once $sqlite_includes . 'class-wp-sqlite-token.php';
+            require_once $sqlite_includes . 'class-wp-sqlite-pdo-user-defined-functions.php';
+            require_once $sqlite_includes . 'class-wp-sqlite-db.php';
+            require_once $sqlite_includes . 'install-functions.php';
+            $this->dbh = new \WP_SQLite_Translator($pdo);
         } else {
-            // WP_DEBUG or not, we don't use @ which causes the slow execution
-            // PDOEngine class will take the Exception handling.
+            require_once $includes . 'integration' . DIRECTORY_SEPARATOR . 'pdoengine.php';
             $this->dbh = new PDOEngine();
         }
+
+        $this->last_error = $this->dbh->get_error_message();
+        if (!empty($this->last_error)) {
+            return false;
+        }
+
         if (!$this->dbh) {
             wp_load_translations_early(); //probably there's no translations
             $this->bail(sprintf(__("<h1>Error establlishing a database connection</h1><p>We have been unable to connect to the specified database. <br />The error message received was %s"), $this->dbh->errorInfo()));
             return;
+        }
+        /*
+          // Create compatibility functions for use within that database connection.
+          $vendor = SQLITE_DB_PATH . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+          if (file_exists($vendor)) {
+          require_once $vendor;
+          //$this->dbh = \Vectorface\MySQLite\MySQLite::createFunctions($this->dbh);
+          }
+         */
+        if ($performance) {
+            $GLOBALS['@pdo'] = $this->dbh->get_pdo();
         }
         $this->has_connected = true;
         $this->ready = true;
@@ -365,6 +420,86 @@ class PDODB extends wpdb {
         //return $required_mysql_version;
         return '8.0';
     }
+    
+    public function fix_query($statement) {
+        $statement = trim($statement);
+        do_action('sqlite/log', $statement);
+        
+        // ALTER TABLE `wp_e_submissions` ;
+        // ALTER TABLE `wp_e_submissions_values` ;
+        // ALTER TABLE `wp_e_submissions_actions_log` ;
+        
+        //$statement = $this->strip_comment($statement);
+        $statement = $this->strip_after($statement);
+        $statement = $this->update_option_null($statement);
+        
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function update_option_null($statement) {
+        global $wpdb;
+        $update_option_null = "UPDATE `".$wpdb->options."` SET `option_value` = NULL WHERE `option_name` = ";
+        if (str_starts_with($statement, $update_option_null)) {
+            $statement = str_replace($update_option_null, "DELETE FROM `".$wpdb->options."` WHERE `option_name` = ", $statement);
+        }
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function strip_after($statement) {
+        $query = $statement;
+        if (str_starts_with($statement, 'ALTER TABLE ')) {
+            if (stripos($statement, 'ADD COLUMN') !== false) {
+                if (stripos($statement, ' AFTER ') !== false) {
+                    // remove the ' AFTER ' not supported
+                    list($statement, $after) = explode(' AFTER ', $statement, 2); 
+                }
+            }
+            if (stripos($statement, ' RENAME COLUMN ') !== false) {
+                // retrieve table structure
+                // add temp table with renamed col
+                // copy content
+                // delete old table
+                // rename temp table
+            }
+        }
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column comment
+     *
+     * @access private
+     */
+    private function strip_comment($statement) {
+        $query = $statement;
+        if (str_starts_with($statement, 'CREATE TABLE ') || str_starts_with($statement, 'ALTER TABLE ')) {
+            foreach (["'", '"'] as $quote) {
+                foreach (['comment', 'COMMENT'] as $cmn) {
+                    $tmp = explode(" ".$cmn." ".$quote, $query);
+                    if (count($tmp) > 1) {
+                        $query = '';
+                        foreach ($tmp as $key => $piece) {
+                            if ($key) {
+                                list($comment, $piece) = explode($quote, $piece);
+                            }
+                            $query .= $piece;
+                        }
+                    }
+                }
+            }
+        }
+        return $query;
+    }
 
 }
 
@@ -373,6 +508,6 @@ class PDODB extends wpdb {
  */
 if (!isset($wpdb)) {
     global $wpdb;
-    $wpdb = new PDODB();
+    $wpdb = new \SQLiteDB\PDODB();
 }
 ?>

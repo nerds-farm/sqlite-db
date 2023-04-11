@@ -166,8 +166,14 @@ fieldset{
     padding: 10px;
     max-width: 100%;
     width: auto;
-    overflow: auto;
 }
 .widefat td, .widefat th {
     max-width: 400px;
+}
+.table-wrapper {
+    width: 100%;
+    overflow: auto;
+}
+.table-wrapper > table {
+    width: 100%;
 }

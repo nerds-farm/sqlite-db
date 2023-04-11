@@ -45,31 +45,37 @@ define('SQLITE_DB_URL', WP_PLUGIN_URL . '/' . SQLITE_DB_DIR . '/');
 
 define('SQLITE_PATCH_DIR', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'patches');
 require_once SQLITE_DB_PATH . 'class' . DIRECTORY_SEPARATOR . 'utils.php';
-require_once SQLITE_DB_PATH . 'functions.php';
+//require_once SQLITE_DB_PATH . 'functions.php';
+
+
+$vendor = SQLITE_DB_PATH . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+if (file_exists($vendor)) {
+    require_once $vendor;
+}
 
 /*
  * Instantiates utility classes.
  */
-
+/*
 if (!class_exists('SQLiteIntegrationUtils')) {
     require_once SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'utility.php';
-    $utils = new SQLiteIntegrationUtils();
+    $utils = new \SQLiteDB\SQLiteIntegrationUtils();
 }
 if (!class_exists('SQLiteIntegrationDocument')) {
     require_once SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'documentation.php';
-    $doc = new SQLiteIntegrationDocument();
+    $doc = new \SQLiteDB\SQLiteIntegrationDocument();
 }
 if (!class_exists('PatchUtils')) {
     require_once SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'patch.php';
-    $patch_utils = new PatchUtils();
+    $patch_utils = new \SQLiteDB\PatchUtils();
 }
 if (!class_exists('SQLiteDbMaintenance')) {
     require_once SQLITE_DB_PATH . 'utilities' . DIRECTORY_SEPARATOR . 'maintenance.php';
-    $maintenance = new SQLiteDbMaintenance();
+    $maintenance = new \SQLiteDB\SQLiteDbMaintenance();
 }
-
+*/
 
 require_once SQLITE_DB_PATH . 'class' . DIRECTORY_SEPARATOR . 'sqlite-db.php';
 /* this is enough for initialization */
-new \SQLiteDb();
+new \SQLiteDB\SQLiteDb();
 ?>

@@ -3,6 +3,9 @@
  * FQDBDIR is a directory where the sqlite database file is placed.
  * If DB_DIR is defined, it is used as FQDBDIR.
  */
+
+require_once('functions.php'); // fix missing functions
+
 if (defined('DB_DIR')) {
     $FQDBDIR = DB_DIR;
     if (substr(DB_DIR, -1, 1) != DIRECTORY_SEPARATOR) {
@@ -18,6 +21,9 @@ if (defined('DB_DIR')) {
 }
 $FQDBDIR = str_replace('/', DIRECTORY_SEPARATOR, $FQDBDIR);
 define('FQDBDIR', $FQDBDIR);
+if (!defined('DB_DIR')) {
+    define('DB_DIR', $FQDBDIR);
+}
 
 if (!defined('SQLITE_DB_PATH')) {
     define('SQLITE_DB_PATH', dirname(__FILE__). DIRECTORY_SEPARATOR);
@@ -31,6 +37,9 @@ if (defined('DB_NAME')) {
     define('FQDB', FQDBDIR . DB_NAME.'.sqlite');
 } else {
     define('FQDB', FQDBDIR . '.ht.sqlite');
+}
+if (!defined('DB_FILE')) {
+    define('DB_FILE', FQDB);
 }
 
 // Define SQLite constant.

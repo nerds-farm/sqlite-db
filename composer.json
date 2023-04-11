@@ -2,6 +2,10 @@
     "minimum-stability": "dev",
     "require": {
         "ifsnop/mysqldump-php": "^2.9",
-        "pilulka/mysql2sqlite": "dev-master"
+        "pilulka/mysql2sqlite": "dev-master",
+        "phpmyadmin/sql-parser": "dev-master"
+    },
+    "require-dev": {
+        "vectorface/mysqlite": "dev-master"
     }
 }

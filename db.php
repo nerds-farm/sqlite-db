@@ -16,6 +16,10 @@ if (!defined('ABSPATH')) { // Oh, you are not WordPress!
     die();
 }
 
+if (!defined('DB_CONTENT')) { // check if DB.php file is loaded
+    define('DB_CONTENT', true);
+}
+
 /*
  * USE_MYSQL is a directive for using MySQL for database.
  * If you want to change the database from SQLite to MySQL or from MySQL to SQLite,

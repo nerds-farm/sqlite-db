@@ -1,4 +1,5 @@
 <?php
+namespace SQLiteDB;
 /**
  * This file defines DatabaseMaintenance class.
  *

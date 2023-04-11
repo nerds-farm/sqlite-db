@@ -1,5 +1,5 @@
 <?php
-
+namespace SQLiteDB;
 /**
  * This class is for WordPress Administration Panel.
  *
@@ -19,30 +19,34 @@ class SQLiteDb {
     public function __construct() {
 
         if (function_exists('register_activation_hook')) {
-            register_activation_hook(__FILE__, array($this, 'install'));
+            register_activation_hook(__FILE__, [$this, 'install']);
         }
+        /*
         if (function_exists('register_deactivation_hook')) {
             ;
         }
         if (function_exists('register_uninstall_hook')) {
-            register_uninstall_hook(__FILE__, array('SQLiteIntegration', 'uninstall'));
+            register_uninstall_hook(__FILE__, [$this, 'uninstall']);
         }
-        
+        */
         if (function_exists('is_multisite') && is_multisite()) {
-            add_action('network_admin_menu', array($this, 'add_network_pages'));
-            add_action('network_admin_notices', array('SQLiteIntegrationUtils', 'show_admin_notice'));
+            add_action('network_admin_menu', [$this, 'add_network_pages']);
         } else {
-            add_action('admin_menu', array($this, 'add_pages'));
-            add_action('admin_notices', array('SQLiteIntegrationUtils', 'show_admin_notice'));
+            add_action('admin_menu', [$this, 'add_pages']);
         }
         // See the docstring for download_backup_db() in utilities/utility.php
         // We need this registration process.
-        add_action('admin_init', array($this, 'exec_actions'));
-        add_action('admin_init', array('SQLiteIntegrationUtils', 'download_backup_db'));
-        add_action('plugins_loaded', array($this, 'textdomain_init'));
+        add_action('admin_init', [$this, 'exec_actions']);
+        add_action('plugins_loaded', [$this, 'textdomain_init']);
+        
+        // suppress all upgrade queries (not supported by SQLITE)
+        //$queries = apply_filters( 'dbdelta_queries', $queries );
+        //$cqueries = apply_filters( 'dbdelta_create_queries', $cqueries );
+        //$iqueries = apply_filters( 'dbdelta_insert_queries', $iqueries );
         
         include_once(SQLITE_DB_PATH.'admin'.DIRECTORY_SEPARATOR.'site-health.php');
-        include_once(SQLITE_DB_PATH.'admin'.DIRECTORY_SEPARATOR.'admin-bar.php');
+        include_once(SQLITE_DB_PATH.'admin'.DIRECTORY_SEPARATOR.'bar.php');
+        include_once(SQLITE_DB_PATH.'admin'.DIRECTORY_SEPARATOR.'notices.php');
         
         if (!empty($_GET['section']) && $_GET['section'] == 'explorer') {
             session_start(); // fix phpliteadmin
@@ -131,16 +135,8 @@ class SQLiteDb {
      * @return no return values.
      */
     public function add_pages() {
-        global $utils, $doc, $patch_utils, $maintenance;
         if (function_exists('add_options_page')) {
-            $page_slug = 'sqlite-db';
-            $welcome_page = add_options_page(__('SQLite Integration'), __('SQLite DB'), 'manage_options', $page_slug, [$this, 'show_page']);
-            //$util_page = add_submenu_page($page_slug, 'System Info', 'System Info', 'manage_options', $page_slug.'-sys-info', array($utils, 'show_utils'));
-            //$edit_db = add_submenu_page($page_slug, 'Setting File', 'Setting File', 'manage_options', $page_slug.'-setting-file', array($utils, 'edit_db_file'));
-            //$doc_page = add_submenu_page($page_slug, 'Documentation', 'Documentation', 'manage_options', $page_slug.'-doc', array($doc, 'show_doc'));
-            //$patch_page = add_submenu_page($page_slug, 'Patch Utility', 'Patch Utility', 'manage_options', $page_slug.'-patch', array($patch_utils, 'show_patch_page'));
-            //$maintenance_page = add_submenu_page($page_slug, 'DB Maintenance', 'DB Maintenance', 'manage_options', $page_slug.'-maintenance', array($maintenance, 'show_maintenance_page'));
-            //$explorer_page = add_submenu_page($page_slug, 'DB Explorer', 'DB Explorer', 'manage_options', $page_slug.'-explorer', [$this, 'show_page']);
+            $welcome_page = add_options_page(__('SQLite Integration'), __('SQLite DB'), 'manage_options', 'sqlite-db', [$this, 'show_page']);
         }
     }
 
@@ -153,15 +149,8 @@ class SQLiteDb {
      * @return no return values.
      */
     public function add_network_pages() {
-        global $utils, $doc, $patch_utils, $maintenance;
         if (function_exists('add_options_page')) {
             $welcome_page = add_submenu_page('settings.php', __('SQLite Integration'), __('SQLite Integration'), 'manage_network_options', 'sqlite-db', [$this, 'show_page']);
-            //$util_page = add_submenu_page(null, 'System Info', 'System Info', 'manage_network_options', 'sys-info', array($utils, 'show_utils'));
-            //$edit_db = add_submenu_page(null, 'Setting File', 'Setting File', 'manage_network_options', 'setting-file', array($utils, 'edit_db_file'));
-            //$doc_page = add_submenu_page(null, 'Documentation', 'Documentation', 'manage_network_options', 'doc', array($doc, 'show_doc'));
-            //$patch_page = add_submenu_page(null, 'Patch Utility', 'Patch Utility', 'manage_network_options', 'patch', array($patch_utils, 'show_patch_page'));
-            //$maintenance_page = add_submenu_page(null, 'DB Maintenance', 'DB Maintenance', 'manage_network_options', 'maintenance', array($maintenance, 'show_maintenance_page'));
-            //$explorer_page = add_submenu_page(null, 'DB Explorer', 'DB Explorer', 'manage_options', 'explorer', [$this, 'show_page']);
         }
     }
 
@@ -220,21 +209,13 @@ class SQLiteDb {
 
     
     public function show_page() {
-        $page = empty($_GET['section']) ? 'dash' : $_GET['section'];
+        $page = empty($_GET['section']) ? 'dashboard' : $_GET['section'];
+        include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php';
         switch($page) {
-            case 'explorer':
-                $explorer_file = SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'utilities' . DIRECTORY_SEPARATOR . 'explorer.php';
-                if (file_exists($explorer_file)) {
-                    include_once($explorer_file);
-                }
-                break;
             case 'sqlite-db':
                 $page = 'welcome';
             default: 
-                $page = 'dashboard';
                 include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'pages' . DIRECTORY_SEPARATOR . $page . '.php';
-
-
         }
     }
 
@@ -243,38 +224,38 @@ class SQLiteDb {
             if (!empty($_GET['action'])) {
                 //var_dump($_GET); die();
                 $reload = false;
+                $alert = true;
                 $redirect_url = admin_url('options-general.php?page=sqlite-db');
+                $db_php = 'db.php';
                 switch ($_GET['action']) {
                     case 'backup':
-                        $db_mysql = FQDBDIR . DB_NAME . '.sqlite';
-                        if (file_exists($db_mysql)) {
-                            copy($db_mysql, FQDBDIR . DB_NAME . '_'.time().'.sqlite');
+                        if (file_exists(FQDB)) {
+                            $db_name = empty($_GET['db_name']) ? DB_NAME . '_'.time() : sanitize_title_with_dashes($_GET['db_name']);
+                            copy(FQDB, FQDBDIR . $db_name . '.sqlite');
                         }
                         break;
                     case 'create':
-                        
-                        break;
-                    case 'clone':
-                        include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'class' . DIRECTORY_SEPARATOR . 'mysql2sqlite.php';
-                        $db_mysql = FQDBDIR . DB_NAME . '.sqlite';
-                        if (file_exists($db_mysql)) {
-                            rename($db_mysql, FQDBDIR . DB_NAME . '_'.filemtime($db_mysql).'.sqlite');
+                        if (!empty($_GET['db_name'])) {
+                            $db_name = sanitize_title_with_dashes($_GET['db_name']);
+                            $db_new = FQDBDIR . $db_name . '.sqlite';
+                            if (!file_exists($db_new)) {
+                                //touch($db_new);
+                                file_put_contents($db_new, '');
+                            }
                         }
-                        $args = ['sqlitedb' => $db_mysql];
+                        break;
+                    case 'migrate':
+                        include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'class' . DIRECTORY_SEPARATOR . 'mysql2sqlite.php';
+                        if (file_exists(FQDB)) {
+                            rename(FQDB, FQDBDIR . DB_NAME . '_'.filemtime(FQDB).'.sqlite');
+                        }
+                        $args = ['sqlitedb' => FQDB];
                         $converter = new \Mysql2Sqlite($args);
                         $converter->run();
                         break;
                     case 'set':
                         if (!empty($_GET['db_name'])) {
-                            $db_name = sanitize_text_field($_GET['db_name']);
-                            /*if ($db_name == 'add') {
-                                $db_mysql = FQDBDIR . $db_name . '.sqlite';
-                                if (!file_exists($db_mysql)) {
-                                    //touch($db_mysql);
-                                    file_put_contents($db_mysql, '');
-                                }
-                            }*/
-                            //var_dump($db_name); die();
+                            $db_name = sanitize_title_with_dashes($_GET['db_name']);
                             $this->wp_update_global_config('DB_NAME', $db_name);
                             if (!defined('DATABASE_TYPE') || DATABASE_TYPE != 'sqlite') {
                                 $this->wp_update_global_config('DATABASE_TYPE', 'sqlite');
@@ -283,16 +264,15 @@ class SQLiteDb {
                             $reload = true;
                         }
                         break;
-                    case 'switch':
-                        $db_php = 'db.php';
-                        $db_sqlite_plugin_php = SQLITE_DB_DIR.DIRECTORY_SEPARATOR.$db_php; // sqlite-db/db.php
+                    case 'install':
                         $db_file = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . $db_php;
                         $db_plugin = SQLITE_DB_PATH . $db_php;
                         $db_plugin = str_replace('/', DIRECTORY_SEPARATOR, $db_plugin);
                         $db_require = 'include_once "'.$db_plugin.'";';
+                        $db_sqlite_plugin_php = SQLITE_DB_DIR.DIRECTORY_SEPARATOR.$db_php; // sqlite-db/db.php
                         if (file_exists($db_file)) {
                             $db_file_content = file_get_contents($db_file);
-                            if (strpos($db_file_content, $db_sqlite_plugin_php) === false) {
+                            if (!defined('DB_CONTENT')) { // || strpos($db_file_content, $db_sqlite_plugin_php) === false) {
                                 $db_file_content = '<?php '.$db_require.' ?>'.PHP_EOL.$db_file_content;
                                 file_put_contents($db_file, $db_file_content);
                             }
@@ -302,6 +282,29 @@ class SQLiteDb {
                             file_put_contents($db_file, '<?php'.PHP_EOL.$db_require);
                             //copy($db_plugin, $db_file);
                         }
+                        $reload = true;
+                        $alert = false;
+                        break;
+                    case 'remove':
+                        $db_file = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . $db_php;
+                        $db_plugin = SQLITE_DB_PATH . $db_php;
+                        $db_plugin = str_replace('/', DIRECTORY_SEPARATOR, $db_plugin);
+                        $db_require = 'include_once "'.$db_plugin.'";';
+                        $db_sqlite_plugin_php = SQLITE_DB_DIR.DIRECTORY_SEPARATOR.$db_php; // sqlite-db/db.php
+                        if (file_exists($db_file) && defined('DB_CONTENT')) {
+                            $db_file_content = file_get_contents($db_file);
+                            $db_file_require = '<?php '.$db_require.' ?>';
+                            if (strpos($db_file_content, $db_file_require) !== false) {
+                                $db_file_content = str_replace($db_file_require, '', $db_file_content);
+                                file_put_contents($db_file, $db_file_content);
+                            } else {
+                                unlink($db_file);
+                            }
+                        }
+                        $reload = true;
+                        $alert = false;
+                        break;
+                    case 'switch':
                         if (defined('DATABASE_TYPE') && DATABASE_TYPE == 'sqlite') {
                             $this->wp_update_global_config('DATABASE_TYPE', '');
                             // delete db.php
@@ -325,7 +328,7 @@ class SQLiteDb {
                  */
                 
                 if ($reload) {
-                    echo '<script>alert("New DB is set, you need to perform a new login");window.location.href = "'. $redirect_url .'";</script>';
+                    echo '<script>'.($alert ? 'alert("New DB is set, you need to perform a new login");' : '').'window.location.href = "'. $redirect_url .'";</script>';
                 } else {
                     // switch USE_MYSQL value in config.php
                     //wp_redirect($redirect_url);
