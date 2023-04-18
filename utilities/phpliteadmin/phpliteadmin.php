@@ -1314,7 +1314,7 @@ if ($auth->isAuthorized()) {
             //- Edit row (=row_edit)
             case "row_edit":
                 $pks = json_decode($_GET['pk']);
-                //var_dump($pks); die();
+                //var_dump($_GET['pk']); var_dump($pks); die();
                 $z = 0;
 
                 $tableInfo = $db->getTableInfo($target_table);
@@ -2883,7 +2883,10 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 $pks = array($_GET['pk']);
             else
                 $pks[0] = "";
+            
+            
             $str = implode(', ', $pks);
+            //var_dump(json_encode($pks)); die();
             if ($str == "") { //nothing was selected so show an error
                 echo "<div class='confirm'>";
                 echo $lang['err'] . ": " . $lang['no_sel'];
@@ -2891,7 +2894,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                 echo "<br/><br/>" . $params->getLink(array('action' => 'row_view'), $lang['return']);
             } else {
                 if ((isset($_POST['type']) && $_POST['type'] == "edit") || (isset($_GET['type']) && $_GET['type'] == "edit")) { //edit
-                    echo $params->getForm(array('action' => 'row_edit', 'confirm' => '1', 'pk' => json_encode($pks)), 'post', true);
+                    echo $params->getForm(array('action' => 'row_edit', 'confirm' => '1', 'pk' => $str), 'post', true);
                     $tableInfo = $db->getTableInfo($target_table);
                     $primary_key = $db->getPrimaryKey($target_table);
 
@@ -2970,7 +2973,7 @@ if (isset($get_action) && !isset($_GET['confirm'])) {
                     }
                     echo "</form>";
                 } else { //delete
-                    echo $params->getForm(array('action' => 'row_delete', 'confirm' => '1', 'pk' => json_encode($pks)));
+                    echo $params->getForm(array('action' => 'row_delete', 'confirm' => '1', 'pk' => json_encode($pks))); //
                     echo "<div class='confirm'>";
                     printf($lang['ques_del_rows'], htmlencode($str), htmlencode($target_table));
                     echo "<br/><br/>";
@@ -4353,6 +4356,7 @@ class Database {
                 echo "ALTER TABLE QUERY=(" . htmlencode($query) . "), tablename=($tablename), alterdefs=($alterdefs)<br />";
             $result = $this->alterTable($tablename, $alterdefs);
         } else { //this query is normal - proceed as normal
+            //var_dump($query);
             $result = $this->db->query($query);
             if ($debug)
                 echo "<span title='" . htmlencode($query) . "' onclick='this.innerHTML=\"" . htmlencode(str_replace('"', '\"', $query)) . "\"' style='cursor:pointer'>SQL?</span><br />";
@@ -5011,10 +5015,11 @@ class Database {
         $primary_key = array();
         // check if this table has a rowid
         $getRowID = $this->select('SELECT ROWID FROM ' . $this->quote_id($table) . ' LIMIT 0,1');
-        if (isset($getRowID[0]))
-        // it has, so we prefer addressing rows by rowid			
-            return array('rowid');
-        else {
+        if (isset($getRowID[0])) {
+            $keys = array_keys($getRowID);
+            // it has, so we prefer addressing rows by rowid			
+            return [ reset($keys) ]; //array('rowid');
+        } else {
             // the table is without rowid, so use the primary key
             $table_info = $this->getTableInfo($table);
             if (is_array($table_info)) {
@@ -5032,14 +5037,20 @@ class Database {
     public function wherePK($table, $pk) {
         $where = "";
         $primary_key = $this->getPrimaryKey($table);
+        //var_dump($primary_key); var_dump($pk); die();
+        $i = 0;
         foreach ($primary_key as $pk_index => $column) {
             if ($where != "")
                 $where .= " AND ";
             $where .= $this->quote_id($column) . ' = ';
-            if (is_int($pk[$pk_index]) || is_float($pk[$pk_index]))
+            if (is_int($pk) || is_float($pk)) {
+                $where .= $pk;
+            } else if (is_int($pk[$pk_index]) || is_float($pk[$pk_index])) {
                 $where .= $pk[$pk_index];
-            else
+            } else {
                 $where .= $this->quote($pk[$pk_index]);
+            }
+            $i++;
         }
         return $where;
     }

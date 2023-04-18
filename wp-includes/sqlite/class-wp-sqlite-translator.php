@@ -560,14 +560,10 @@ class WP_SQLite_Translator extends PDO {
 				$this->queries[] = "Executing: {$query->sql} | " . ( $query->params ? 'parameters: ' . implode( ', ', $query->params ) : '(no parameters)' );
 				do {
 					$error = null;
-					try {
-						$stmt        = $this->pdo->prepare( $query->sql );
-                                                
-                                                //var_dump($stmt->queryString);
-                                                //$queryString = apply_filter('sqlite-db/query', $stmt->queryString);
-                                                
+                                        try {
+                                                $stmt = $this->pdo->prepare( $query->sql );
                                                 $last_retval = $stmt->execute( $query->params );
-					} catch ( PDOException $error ) {
+                                        } catch ( PDOException $error ) {
 						if ( $error->getCode() !== self::SQLITE_BUSY ) {
 							throw $error;
 						}

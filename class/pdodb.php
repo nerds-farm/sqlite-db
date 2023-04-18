@@ -52,13 +52,15 @@ class PDODB extends \wpdb {
         if (WP_DEBUG) {
             $this->show_errors();
         }
-        
+
         $this->init_charset();
 
         $this->db_connect();
         add_action('sqlite-db/log', [$this, 'log']);
-        add_filter('sqlite-db/query', [$this, 'fix_query']);
-        add_filter('option_gmt_offset', function ($value, $option) { return intval($value); }, 10, 2);
+        add_filter('sqlite-db/query', [$this, 'rewrite_query']);
+        add_filter('option_gmt_offset', function ($value, $option) {
+            return intval($value);
+        }, 10, 2);
     }
 
     /**
@@ -71,18 +73,17 @@ class PDODB extends \wpdb {
     public function __destruct() {
         return true;
     }
-    
+
     public function log($statement) {
         if (WP_DEBUG && WP_DEBUG_LOG && defined('SQLITE_LOG') && SQLITE_LOG) {
             $log = FQDBDIR . 'sql.log';
-            $line = '['.date('Y-m-d H:i:s').'] '.$statement.PHP_EOL;
+            $line = '[' . date('Y-m-d H:i:s') . '] ' . $statement . PHP_EOL;
             // Write the contents to the file, 
             // using the FILE_APPEND flag to append the content to the end of the file
             // and the LOCK_EX flag to prevent anyone else writing to the file at the same time
             file_put_contents($log, $line, FILE_APPEND | LOCK_EX);
         }
     }
-
 
     /**
      * Method to set character set for the database.
@@ -420,19 +421,53 @@ class PDODB extends \wpdb {
         //return $required_mysql_version;
         return '8.0';
     }
-    
-    public function fix_query($statement) {
+
+    /**
+     * Replaces any parameter placeholders in a query with the value of that
+     * parameter. Useful for debugging. Assumes anonymous parameters from 
+     * $params are are in the same order as specified in $query
+     *
+     * @param string $query The sql query with parameter placeholders
+     * @param array $params The array of substitution parameters
+     * @return string The interpolated query
+     */
+    public static function interpolate_query($query, $params) {
+        $keys = array();
+        $values = $params;
+        # build a regular expression for each parameter
+        foreach ($params as $key => $value) {
+            if (is_string($key)) {
+                $keys[] = '/' . $key . '/';
+            } else {
+                $keys[] = '/[?]/';
+            }
+            if (is_string($value))
+                $values[$key] = "'" . $value . "'";
+            if (is_array($value))
+                $values[$key] = "'" . implode("','", $value) . "'";
+            if (is_null($value))
+                $values[$key] = 'NULL';
+        }
+        $query = preg_replace($keys, $values, $query);
+        return $query;
+    }
+
+    public function rewrite_query($statement) {
+        $original = $statement;
         $statement = trim($statement);
-        do_action('sqlite/log', $statement);
+        //do_action('sqlite-db/log', $original);
+
+        // PRAGMA
         
-        // ALTER TABLE `wp_e_submissions` ;
-        // ALTER TABLE `wp_e_submissions_values` ;
-        // ALTER TABLE `wp_e_submissions_actions_log` ;
+        $statement = $this->empty_alter($statement);
+        $statement = $this->strip_comment($statement);
         
-        //$statement = $this->strip_comment($statement);
         $statement = $this->strip_after($statement);
         $statement = $this->update_option_null($statement);
-        
+        if ($statement != $original) {
+            do_action('sqlite-db/log', $original);
+        }
+        do_action('sqlite-db/log', $statement);
         return $statement;
     }
     
@@ -441,15 +476,33 @@ class PDODB extends \wpdb {
      *
      * @access private
      */
-    private function update_option_null($statement) {
-        global $wpdb;
-        $update_option_null = "UPDATE `".$wpdb->options."` SET `option_value` = NULL WHERE `option_name` = ";
-        if (str_starts_with($statement, $update_option_null)) {
-            $statement = str_replace($update_option_null, "DELETE FROM `".$wpdb->options."` WHERE `option_name` = ", $statement);
+    private function empty_alter($statement) {
+        // ALTER TABLE `wp_e_submissions` ;
+        // ALTER TABLE `wp_e_submissions_values` ;
+        // ALTER TABLE `wp_e_submissions_actions_log` ;
+        if (str_starts_with($statement, "ALTER TABLE ")) {
+            $tmp = explode("`", $statement);
+            if (count($tmp) < 3 || trim($tmp[2]) == ';') {
+                $statement = 'SELECT 1 ;'; // nulled query
+            }
         }
         return $statement;
     }
-    
+
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function update_option_null($statement) {
+        global $wpdb;
+        $update_option_null = "UPDATE `" . $wpdb->options . "` SET `option_value` = NULL WHERE `option_name` = ";
+        if (str_starts_with($statement, $update_option_null)) {
+            $statement = str_replace($update_option_null, "DELETE FROM `" . $wpdb->options . "` WHERE `option_name` = ", $statement);
+        }
+        return $statement;
+    }
+
     /**
      * Method to strip column after
      *
@@ -461,7 +514,7 @@ class PDODB extends \wpdb {
             if (stripos($statement, 'ADD COLUMN') !== false) {
                 if (stripos($statement, ' AFTER ') !== false) {
                     // remove the ' AFTER ' not supported
-                    list($statement, $after) = explode(' AFTER ', $statement, 2); 
+                    list($statement, $after) = explode(' AFTER ', $statement, 2);
                 }
             }
             if (stripos($statement, ' RENAME COLUMN ') !== false) {
@@ -474,7 +527,7 @@ class PDODB extends \wpdb {
         }
         return $statement;
     }
-    
+
     /**
      * Method to strip column comment
      *
@@ -485,12 +538,12 @@ class PDODB extends \wpdb {
         if (str_starts_with($statement, 'CREATE TABLE ') || str_starts_with($statement, 'ALTER TABLE ')) {
             foreach (["'", '"'] as $quote) {
                 foreach (['comment', 'COMMENT'] as $cmn) {
-                    $tmp = explode(" ".$cmn." ".$quote, $query);
+                    $tmp = explode(" " . $cmn . " " . $quote, $query);
                     if (count($tmp) > 1) {
                         $query = '';
                         foreach ($tmp as $key => $piece) {
                             if ($key) {
-                                list($comment, $piece) = explode($quote, $piece);
+                                list($comment, $piece) = explode($quote, $piece, 2);
                             }
                             $query .= $piece;
                         }
