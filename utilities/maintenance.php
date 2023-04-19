@@ -30,7 +30,7 @@ class SQLiteDbMaintenance {
      * @return boolean|multitype:string
      * @access private
      */
-    private function sanity_check() {
+    public static function sanity_check() {
         global $wpdb;
         $results_table = array();
         $columns_to_check = array(
@@ -48,7 +48,7 @@ class SQLiteDbMaintenance {
                 'comment_karma' => '\'0\'',
                 'comment_approved' => '\'1\'',
                 'comment_agent' => '\'\'',
-                'comment_type' => '\'\'',
+                'comment_type' => '\'comment\'',
                 'comment_parent' => '\'0\'',
                 'user_id' => '\'0\''
             ),
@@ -166,11 +166,17 @@ class SQLiteDbMaintenance {
             )
         );
         $tables = $wpdb->tables('all');
+        //var_dump($tables);
+        //echo '<pre>';
+        //var_dump($columns_to_check);
         foreach ($tables as $table) {
             $col_infos = $wpdb->get_results("SHOW COLUMNS FROM $table");
+            //var_dump($col_infos);
             foreach ($col_infos as $col) {
-                if (array_key_exists($col->Field, $columns_to_check[$table]) && $col->Default != $columns_to_check[$table][$col->Field]) {
-                    $results_table[$table] = 'damaged';
+                if (!empty($columns_to_check[$table]) 
+                        && array_key_exists($col->name, $columns_to_check[$table]) 
+                        && $col->dflt_value != $columns_to_check[$table][$col->name]) {
+                    $results_table[$table] = 'damaged: field "'.$col->name. '" has default value '.$col->dflt_value.' should be '.$columns_to_check[$table][$col->name];
                     break;
                 }
             }
@@ -191,7 +197,7 @@ class SQLiteDbMaintenance {
      * @return string|array of string
      * @access private
      */
-    private function do_fix_database() {
+    public static function do_fix_database() {
         global $wpdb, $wp_version, $utils;
         $global_schema_to_change = array(
             $wpdb->prefix . 'commentmeta' => array(
@@ -343,10 +349,10 @@ class SQLiteDbMaintenance {
             return false;
         $return_val = array();
         $queries = array();
-        $results = $this->sanity_check();
+        $results = self::sanity_check();
         if ($results !== true) {
-            if (!$this->maintenance_backup()) {
-                $message = __('Can\'t create backup file.', $domain);
+            if (!self::maintenance_backup()) {
+                $message = __('Can\'t create backup file.', 'sqlite-db');
                 return $message;
             }
             $tables = array_keys($results);
@@ -365,16 +371,16 @@ class SQLiteDbMaintenance {
                     $sql = 'ALTER TABLE' . ' ' . $table . ' ' . 'CHANGE COLUMN' . ' ' . $query;
                     $res = $wpdb->query($sql);
                     if ($res === false) {
-                        $return_val[] = __('Failed: ', $domain) . $query;
+                        $return_val[] = __('Failed: ', 'sqlite-db') . $query;
                     }
                 }
             }
         } else {
-            $message = __('Your database is OK. You don\'t have to restore it.', $domain);
+            $message = __('Your database is OK. You don\'t have to restore it.', 'sqlite-db');
             return $message;
         }
         if (empty($return_val)) {
-            $message = __('Your database restoration is successfully finished!', $domain);
+            $message = __('Your database restoration is successfully finished!', 'sqlite-db');
             return $message;
         } else {
             return $return_val;
@@ -394,10 +400,10 @@ class SQLiteDbMaintenance {
         $domain = $utils->text_domain;
         $tables = $wpdb->tables('all');
         if (!isset($_POST['table'])) {
-            $message = __('Table name is not selected.', $domain);
+            $message = __('Table name is not selected.', 'sqlite-db');
             return $message;
         } elseif (!in_array($_POST['table'], $tables)) {
-            $message = __('There\'s no such table.', $domain);
+            $message = __('There\'s no such table.', 'sqlite-db');
             return $message;
         } else {
             $table_name = $_POST['table'];
@@ -413,10 +419,10 @@ class SQLiteDbMaintenance {
      *
      * @return boolean
      */
-    private function maintenance_backup() {
+    public static function maintenance_backup() {
         $result = array();
-        $database_file = DB_SQLITE;
-        $db_name = basename(DB_SQLITE);
+        $database_file = FQDB;
+        $db_name = basename(FQDB);
         if (!file_exists($database_file)) {
             return false;
         }
@@ -430,8 +436,8 @@ class SQLiteDbMaintenance {
             }
         } else {
             $backup_file = $database_file . '.' . $today . '.maintenance-backup.zip';
-            $zip = new ZipArchive();
-            $res = $zip->open($backup_file, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+            $zip = new \ZipArchive();
+            $res = $zip->open($backup_file, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
             if ($res === true) {
                 $zip->addFile($database_file, $db_name);
                 $result = true;
@@ -443,144 +449,21 @@ class SQLiteDbMaintenance {
         return $result;
     }
 
-    /**
-     * Method to display the maintenance page on the admin panel.
-     *
-     */
-    function show_maintenance_page() {
-        global $utils, $wpdb;
-        $domain = $utils->text_domain;
-        if (is_multisite() && !current_user_can('manage_network_options')) {
-            die(__('You are not allowed to access this page!', $domain));
-        } elseif (!current_user_can('manage_options')) {
-            die(__('You are not allowed to access this page!', $domain));
-        }
-        if (isset($_GET['page']) && $_GET['page'] == 'maintenance') :
-            ?>
-            <?php include_once SQLITE_DB_PATH . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'navigation.php'; ?>
-            <div class="wrap" id="sqlite-admin-wrap">
-                <h2><?php _e('Database Maintenace', $domain); ?></h2>
-                <h3><?php _e('Important Notice', $domain); ?></h3>
-                <p>
-                    <span style="color: red;"><?php _e('When you installed WordPress 3.5.x with SQLite Integration and upgraded to 3.6, your database might not function as expected.', $domain); ?></span>
-                    <?php _e('This page provide you the database sanity check utility and the restore utility.', $domain); ?>
-                </p>
-                <p>
-                    <?php _e('Click "Sanity Check" button first, and see if you need to fix database or not. If needed, click "Fix Database" button. Afterward you may go to Miscellaneous page and optimize database (this is not required).', $domain); ?>
-                </p>
-                <p>
-                    <?php _e('Fix Database procedure will create a database backup file each time the button clicked. The backup file is named with "maintenance-backup", so you can remove it if you don\'t need it. Please go to Miscellaneous page and check if there is one.', $domain); ?>
-                </p>
-                <p>
-                    <?php _e('If you installed WordPress 3.6 (not upgraded), you don\'t have to restore the database.', $domain); ?>
-                </p>
-
-                <form action="" method="post">
-                    <?php
-                    if (function_exists('wp_nonce_field')) {
-                        wp_nonce_field('sqliteintegration-database-manip-stats');
-                    }
-                    ?>
-                    <input type="submit" name="sanity-check" class="button-primary" value="<?php _e('Sanity Check', $domain); ?>" onclick="return confirm('<?php _e('Are you sure to check the database? This will take some time.\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" />
-                    <input type="submit" name="do-fix-database" class="button-primary" value="<?php _e('Fix database', $domain); ?>" onclick="return confirm('<?php _e('Are you sure to do fix the database? This will take some time.\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" />
-                </form>
-
-                <?php if (defined('WP_DEBUG') && WP_DEBUG == true) : ?>
-                    <h3><?php _e('Columns Information', $domain); ?></h3>
-                    <p>
-                        <?php _e('Select a table name and click "Display Columns" button, and you\'ll see the column property of that table. This information is for debug use.', $domain); ?>
-                    </p>
-                    <?php
-                    $wp_tables = $wpdb->tables('all');
-                    ?>
-                    <form action="" method="post">
-                        <?php
-                        if (function_exists('wp_nonce_field')) {
-                            wp_nonce_field('sqliteintegration-database-manip-stats');
-                        }
-                        ?>
-                        <label for="table"/><?php _e('Table Name: ', $domain); ?></label>
-                        <select name="table" id="table">
-                            <?php foreach ($wp_tables as $table) : ?>
-                                <option value="<?php echo $table; ?>"><?php echo $table; ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <input type="submit" name="show-columns" class="button-secondary" value="<?php _e('Display Columns', $domain); ?>" onclick="return confirm('<?php _e('Display columns in the selected table.\n\nClick [Cancel] to stop, [OK] to continue.', $domain); ?>')" />
-                    </form>
-                <?php endif; ?>
-
-            </div>
-            <?php
-        endif;
-
-        if (isset($_POST['do-fix-database'])) {
-            check_admin_referer('sqliteintegration-database-manip-stats');
-            if (is_multisite() && !current_user_can('manage_network_options')) {
-                die(__('You are not allowed to do this operation!', $domain));
-            } elseif (!current_user_can('manage_options')) {
-                die(__('You are not allowed to do this operation!', $domain));
-            }
-            $fix_results = $this->do_fix_database();
-            if (is_array($fix_results)) {
-                $title = '<h3>' . __('Results', $domain) . '</h3>';
-                echo '<div class="wrap" id="sqlite-admin-side-wrap">';
-                echo $title;
-                echo '<ul>';
-                foreach ($fix_results as $result) {
-                    echo '<li>' . $result . '</li>';
-                }
-                echo '</ul>';
-                echo '</div>';
-            } else {
-                $title = '<h3>' . __('Results', $domain) . '</h3>';
-                echo '<div class="wrap" id="sqlite-admin-side-wrap">';
-                echo $title;
-                echo '<p>' . $fix_results . '</p>';
-                echo '</div>';
-            }
-        }
-        if (isset($_POST['sanity-check'])) {
-            check_admin_referer('sqliteintegration-database-manip-stats');
-            if (is_multisite() && !current_user_can('manage_network_options')) {
-                die(__('You are not allowed to do this operation!', $domain));
-            } elseif (!current_user_can('manage_options')) {
-                die(__('You are not allowed to do this operation!', $domain));
-            }
-            $check_results = $this->sanity_check();
-            if ($check_results !== true) {
-                $title = '<h3>' . __('Checked Results', $domain) . '</h3>';
-                echo '<div class="wrap" id="sqlite-admin-side-wrap">';
-                echo $title;
-                echo '<ul>';
-                foreach ($check_results as $table => $damaged) {
-                    $message = __(' needs restoring.', $domain);
-                    echo '<li><span class="em">' . $table . '</span>' . $message . '</li>';
-                }
-                echo '</ul>';
-                echo '</div>';
-            } else {
-                $title = '<h3>' . __('Checked Results', $domain) . '</h3>';
-                $message = __('Your database is OK. You don\'t have to restore it.', $domain);
-                echo '<div class="wrap" id="sqlite-admin-side-wrap">';
-                echo $title;
-                echo '<p>' . $message . '</p>';
-                echo '</div>';
-            }
-        }
+    /*
         if (isset($_POST['show-columns'])) {
             check_admin_referer('sqliteintegration-database-manip-stats');
             if (is_multisite() && !current_user_can('manage_network_options')) {
-                die(__('You are not allowed to do this operation!', $domain));
+                die(__('You are not allowed to do this operation!', 'sqlite-db'));
             } elseif (!current_user_can('manage_options')) {
-                die(__('You are not allowed to do this operation!', $domain));
+                die(__('You are not allowed to do this operation!', 'sqlite-db'));
             }
             $results = $this->show_columns();
             if (is_array($results)) {
-                $title = '<h3>' . sprintf(__('Columns In %s', $domain), $_POST['table']) . '</h3>';
-                $column_header = __('Column', $domain);
-                $type_header = __('Type', $domain);
-                $null_header = __('Null', $domain);
-                $default_header = __('Default', $domain);
+                $title = '<h3>' . sprintf(__('Columns In %s', 'sqlite-db'), $_POST['table']) . '</h3>';
+                $column_header = __('Column', 'sqlite-db');
+                $type_header = __('Type', 'sqlite-db');
+                $null_header = __('Null', 'sqlite-db');
+                $default_header = __('Default', 'sqlite-db');
                 echo '<div class="wrap" id="sqlite-admin-side-wrap" style="clear: both;">';
                 echo $title;
                 echo '<table class="widefat page fixed"><thead><tr><th>' . $column_header . '</th><th>' . $type_header . '</th><th>' . $null_header . '</th><th>' . $default_header . '</th></tr></thead>';
@@ -597,14 +480,15 @@ class SQLiteDbMaintenance {
                 }
                 echo '</tbody></table></div>';
             } else {
-                $title = '<h3>' . __('Columns Info', $domain) . '</h3>';
+                $title = '<h3>' . __('Columns Info', 'sqlite-db') . '</h3>';
                 echo '<div class="wrap" id="sqlite-admin-side-wrap">';
                 echo $title;
                 echo '<p>' . $results;
                 echo '</p></div>';
             }
         }
-    }
+     * 
+     */
 
 }
 ?>

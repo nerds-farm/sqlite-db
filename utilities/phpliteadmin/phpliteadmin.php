@@ -964,15 +964,16 @@ if ($auth->isAuthorized()) {
             $importSuccess = $db->import_csv($_FILES["file"]["tmp_name"], $table, $field_terminate, $field_enclosed, $field_escaped, $null, $fields_in_first_row);
         }
     }
+    
     //- Download (backup) a database file (as SQLite file, not as dump)
-    if (isset($_GET['download']) && isManagedDB($_GET['download']) !== false) {
-        ob_end_clean();
-        header("Content-type: application/octet-stream");
-        header('Content-Disposition: attachment; filename="' . basename($_GET['download']) . '";');
-        header("Pragma: no-cache");
-        header("Expires: 0");
-        readfile($_GET['download']);
-        exit;
+    if (isset($_GET['download'])) { // && isManagedDB($_GET['download']) !== false) {
+        $download_url = admin_url('options-general.php?page=sqlite-db&action=download&download='.$_GET['download']);
+        //var_dump($download_url);
+        //wp_redirect($download_url);
+        echo '<a href="'. $download_url .'" class="button"><span class="dashicons dashicons-download"></span> '.$_GET['download'].'</a> ';  
+        echo $params->getLink([], 'BACK', 'button ');
+        echo '<script>window.location.href = "'. $download_url .'";</script>';
+        //die();
     }
 
     //- Select database (from session or first available)
@@ -1822,6 +1823,7 @@ if (count($databases) == 0) { // the database array is empty, offer to create a 
 
 //- HTML: sidebar
 echo '<div class="body_tbl"><div class="left_td">';
+echo '<a class="pla-collapse" href="#" onClick="jQuery(\'.body_tbl\').toggleClass(\'pla-collapsed\');"><span class="dashicons dashicons-admin-collapse"></span></a>';
 echo "<div id='leftNav'>";
 /* echo "<h1><a href='".$params->getURL()."'>";
   echo "<span id='logo'>".PROJECT."</span> <span id='version'>v".VERSION."</span>";

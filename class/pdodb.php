@@ -56,7 +56,7 @@ class PDODB extends \wpdb {
         $this->init_charset();
 
         $this->db_connect();
-        add_action('sqlite-db/log', [$this, 'log']);
+        add_action('sqlite-db/log', [$this, 'log'], 10, 2);
         add_filter('sqlite-db/query', [$this, 'rewrite_query']);
         add_filter('option_gmt_offset', function ($value, $option) {
             return intval($value);
@@ -74,14 +74,22 @@ class PDODB extends \wpdb {
         return true;
     }
 
-    public function log($statement) {
+    public function log($statement, $is_error = false) {
         if (WP_DEBUG && WP_DEBUG_LOG && defined('SQLITE_LOG') && SQLITE_LOG) {
-            $log = FQDBDIR . 'sql.log';
+            $log = FQDBDIR . SQLITE_LOG . '.sql.log';
             $line = '[' . date('Y-m-d H:i:s') . '] ' . $statement . PHP_EOL;
             // Write the contents to the file, 
             // using the FILE_APPEND flag to append the content to the end of the file
             // and the LOCK_EX flag to prevent anyone else writing to the file at the same time
             file_put_contents($log, $line, FILE_APPEND | LOCK_EX);
+        }
+        if (WP_DEBUG && WP_DEBUG_LOG && $is_error) {
+            $debug = FQDBDIR . 'debug.sql.log';
+            $line = '[' . date('Y-m-d H:i:s') . '] ' . $statement . PHP_EOL;
+            // Write the contents to the file, 
+            // using the FILE_APPEND flag to append the content to the end of the file
+            // and the LOCK_EX flag to prevent anyone else writing to the file at the same time
+            file_put_contents($debug, $line, FILE_APPEND | LOCK_EX);
         }
     }
 
@@ -173,7 +181,10 @@ class PDODB extends \wpdb {
                 $str = '';
         }
         $EZSQL_ERROR[] = array('query' => $this->last_query, 'error_str' => $str);
-
+        
+        $query = $this->last_query;
+        do_action('sqlite-db/log', $query, true);
+            
         if ($this->suppress_errors)
             return false;
 
@@ -199,8 +210,7 @@ class PDODB extends \wpdb {
             //$str = htmlspecialchars($str, ENT_NOQUOTES);
             //$str = str_replace('&lt;', '<', $str);
             //$str = str_replace('&gt;', '>', $str);
-            $query = htmlspecialchars($this->last_query, ENT_QUOTES);
-
+            $query = htmlspecialchars($query, ENT_QUOTES);
             echo '<div id="error" style="padding: 15px; background-color: #ffffdd;">
 			<p class="wpdberror"><strong>WordPress database error:</strong> [' . $str . ']<br />
 			<code>' . $query . '</code></p>
@@ -458,6 +468,7 @@ class PDODB extends \wpdb {
         //do_action('sqlite-db/log', $original);
 
         // PRAGMA
+        //https://www.sqlite.org/pragma.html
         
         $statement = $this->empty_alter($statement);
         $statement = $this->strip_comment($statement);

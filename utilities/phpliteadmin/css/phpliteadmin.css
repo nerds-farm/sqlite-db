@@ -177,3 +177,30 @@ fieldset{
 .table-wrapper > table {
     width: 100%;
 }
+
+table textarea {
+    max-width: 100%;
+}
+
+.pla-collapse {
+  text-align: right;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.pla-collapsed .pla-collapse {
+    height: 100%;
+}
+.pla-collapsed .pla-collapse span {
+    transform: rotate(180deg);
+}
+.pla-collapsed .left_td {
+  width: 20px;
+  overflow: hidden;
+}
+.pla-collapsed .left_td #leftNav {
+    display: none;
+}
+.pla-collapsed .right_td {
+  width: calc(100% - 60px);
+}

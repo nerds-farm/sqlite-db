@@ -304,6 +304,15 @@ class SQLiteDb {
                         $reload = true;
                         $alert = false;
                         break;
+                    case 'debug':
+                        if (defined('SQLITE_LOG')) {
+                            $this->wp_update_global_config('SQLITE_LOG', '');
+                        } else {
+                            $this->wp_update_global_config('SQLITE_LOG', 'query');
+                        }
+                        $reload = true;
+                        $alert = false;
+                        break;
                     case 'switch':
                         if (defined('DATABASE_TYPE') && DATABASE_TYPE == 'sqlite') {
                             $this->wp_update_global_config('DATABASE_TYPE', '');
@@ -313,6 +322,16 @@ class SQLiteDb {
                         }
                         $redirect_url = admin_url(); 
                         $reload = true;
+                        break;
+                    case 'download':
+                        if (!empty($_GET['download']) && file_exists($_GET['download'])) {
+                            header("Content-type: application/octet-stream");
+                            header('Content-Disposition: attachment; filename="' . basename($_GET['download']) . '";');
+                            header("Pragma: no-cache");
+                            header("Expires: 0");
+                            readfile($_GET['download']);
+                            exit;
+                        }
                         break;
                 }
 
@@ -347,7 +366,8 @@ class SQLiteDb {
         }
 
         $half = "define( '" . $key . "',";
-        $line = $half . " '" . $value . "' );";
+        $value_str = !empty($value) && is_string($value) ? "'" . $value . "'" : 'true';
+        $line = $half . " ".$value_str." );";
         if (empty($value)) {
             $line = ''; // remove the configuration
         }

@@ -244,6 +244,9 @@ class Database {
     //get the last modified time of database
     public function getDate() {
         global $lang;
+        if (empty($lang['date_format'])) {
+            $lang = [ 'date_format' => get_option('date_format').' '.get_option('time_format')];
+        }
         return date($lang['date_format'], filemtime($this->data['path']));
     }
 

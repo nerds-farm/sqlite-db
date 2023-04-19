@@ -572,7 +572,7 @@ class WP_SQLite_Translator extends PDO {
 			}
 
 			if ( $translation->has_result ) {
-				$this->results = $translation->result;
+                            	$this->results = $translation->result;
 			} else {
 				switch ( $translation->mysql_query_type ) {
 					case 'DESCRIBE':
@@ -788,7 +788,7 @@ class WP_SQLite_Translator extends PDO {
 		$tokens           = ( new WP_SQLite_Lexer( $query ) )->tokens;
 		$this->rewriter   = new WP_SQLite_Query_Rewriter( $tokens );
 		$this->query_type = $this->rewriter->peek()->value;
-
+                
 		switch ( $this->query_type ) {
 			case 'ALTER':
 				$result = $this->translate_alter();
@@ -899,6 +899,20 @@ class WP_SQLite_Translator extends PDO {
 			case 'SHOW':
 				$result = $this->translate_show();
 				break;
+                            
+                        case 'PRAGMA':
+                                //var_dump($query);
+                                $result = $this->get_translation_result(
+					array(
+						WP_SQLite_Translator::get_query_object(
+							$query
+						),
+					)
+				);
+                                $statement = $this->pdo->query( $query );
+                                $result->has_result = true;
+                                $result->result = $statement->fetchAll(\PDO::FETCH_OBJ);
+                                break;
 
 			default:
 				throw new Exception( 'Unknown query type: ' . $this->query_type );

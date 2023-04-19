@@ -160,7 +160,17 @@ if (trim($migrate)) {
             <input type="submit" value="Create a backup of current DB" class="button">
         </form>
     </div>
+                
+    <?php if (defined('SQLITE_LOG') || WP_DEBUG) { ?>
+    <div class="card">
+        <h2>Debug</h2>
+        <p>Store all the executed Query: a sql.log file will be generated in the database folder, it could increase a lot its filesize, so enable only when needed</p>
+        <a href="?page=sqlite-db&action=debug" class="button button-primary button-warning"><?php if (defined('SQLITE_LOG') && SQLITE_LOG) { _e('Disable Debug'); } else { _e('Enable Debug'); } ?></a>
+        <p>* Hint: you can manage it manually, add on wp-config.php file a new constant named 'SQLITE_LOG'with the wanted log file name, like:<br>
+                    <i>define('SQLITE_LOG', 'query');</i></p>
+    </div>
     <?php }
+    }
 }
 
 if (!empty($dbs)) {
