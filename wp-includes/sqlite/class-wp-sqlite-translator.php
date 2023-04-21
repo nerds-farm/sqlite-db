@@ -428,6 +428,15 @@ class WP_SQLite_Translator extends PDO {
 	public function get_pdo() {
 		return $this->pdo;
 	}
+        
+        /**
+	 * Set the PDO object.
+	 *
+	 * @return PDO
+	 */
+	public function set_pdo($pdo) {
+		return $this->pdo = $pdo;
+	}
 
 	/**
 	 * Method to return inserted row id.

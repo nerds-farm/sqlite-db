@@ -254,24 +254,16 @@ class PDODB extends \wpdb {
             $pdo = $GLOBALS['@pdo'];
         }
 
-        $includes = SQLITE_DB_PATH . 'wp-includes' . DIRECTORY_SEPARATOR;
-        $performance = true;
-
-        if ($performance) {
-            $sqlite_includes = $includes . 'sqlite' . DIRECTORY_SEPARATOR;
-            require_once $sqlite_includes . 'class-wp-sqlite-lexer.php';
-            require_once $sqlite_includes . 'class-wp-sqlite-query-rewriter.php';
-            require_once $sqlite_includes . 'class-wp-sqlite-translator.php';
-            require_once $sqlite_includes . 'class-wp-sqlite-token.php';
-            require_once $sqlite_includes . 'class-wp-sqlite-pdo-user-defined-functions.php';
-            require_once $sqlite_includes . 'class-wp-sqlite-db.php';
-            require_once $sqlite_includes . 'install-functions.php';
-            $this->dbh = new \WP_SQLite_Translator($pdo);
-        } else {
-            require_once $includes . 'integration' . DIRECTORY_SEPARATOR . 'pdoengine.php';
-            $this->dbh = new PDOEngine();
-        }
-
+        $sqlite_includes = SQLITE_DB_PATH . 'wp-includes' . DIRECTORY_SEPARATOR . 'sqlite' . DIRECTORY_SEPARATOR;
+        require_once $sqlite_includes . 'class-wp-sqlite-lexer.php';
+        require_once $sqlite_includes . 'class-wp-sqlite-query-rewriter.php';
+        require_once $sqlite_includes . 'class-wp-sqlite-translator.php';
+        require_once $sqlite_includes . 'class-wp-sqlite-token.php';
+        require_once $sqlite_includes . 'class-wp-sqlite-pdo-user-defined-functions.php';
+        require_once $sqlite_includes . 'class-wp-sqlite-db.php';
+        require_once $sqlite_includes . 'install-functions.php';
+        $this->dbh = new \WP_SQLite_Translator($pdo);
+        
         $this->last_error = $this->dbh->get_error_message();
         if (!empty($this->last_error)) {
             return false;
@@ -282,17 +274,17 @@ class PDODB extends \wpdb {
             $this->bail(sprintf(__("<h1>Error establlishing a database connection</h1><p>We have been unable to connect to the specified database. <br />The error message received was %s"), $this->dbh->errorInfo()));
             return;
         }
-        /*
-          // Create compatibility functions for use within that database connection.
-          $vendor = SQLITE_DB_PATH . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
-          if (file_exists($vendor)) {
-          require_once $vendor;
-          //$this->dbh = \Vectorface\MySQLite\MySQLite::createFunctions($this->dbh);
-          }
-         */
-        if ($performance) {
-            $GLOBALS['@pdo'] = $this->dbh->get_pdo();
+        
+        $GLOBALS['@pdo'] = $this->dbh->get_pdo();
+        
+        // Create compatibility functions for use within that database connection.
+        $vendor = SQLITE_DB_PATH . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+        if (file_exists($vendor)) {
+            require_once $vendor;
+            $pdo = $this->dbh->get_pdo();
+            $this->dbh->set_pdo( \Vectorface\MySQLite\MySQLite::createFunctions($pdo) );
         }
+        
         $this->has_connected = true;
         $this->ready = true;
     }
@@ -472,13 +464,58 @@ class PDODB extends \wpdb {
         
         $statement = $this->empty_alter($statement);
         $statement = $this->strip_comment($statement);
-        
+        $statement = $this->show_variables($statement);
         $statement = $this->strip_after($statement);
         $statement = $this->update_option_null($statement);
         if ($statement != $original) {
             do_action('sqlite-db/log', $original);
         }
         do_action('sqlite-db/log', $statement);
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function show_variables($statement) {
+        // SHOW VARIABLES WHERE `Variable_name` IN ( 'version_comment', 'innodb_version' )
+        // version_comment 	MySQL Community Server (GPL)
+        if (str_starts_with($statement, "SHOW VARIABLES ")) {
+            $tmp = explode("(", $statement, 2);
+            if (count($tmp) > 1) {
+                $statement = '';
+                $tmp = explode(',', end($tmp));
+                $vars = [];
+                foreach ($tmp as $field) {
+                    $field = str_replace("'", '', $field);
+                    $field = str_replace('"', '', $field);
+                    $field = str_replace(' ', '', $field);
+                    $field = str_replace(')', '', $field);
+                    if ($field) {
+                        switch($field) {
+                            case 'version_comment':
+                                $vars[$field] = 'SQLite (PDO)';
+                                break;
+                            case 'innodb_version':
+                                $db = Utils::get_sqlite_db();
+                                $vars[$field] = $db->getSQLiteVersion();
+                                break;
+                            default:
+                                $vars[$field] = '';
+                        }
+                    }
+                }
+                foreach ($vars as $akey => $avar) {
+                    if ($statement) {
+                        $statement .= ' UNION ';
+                    }
+                    $statement .= "SELECT '".$akey."' as Variable_name, '".$avar."' as Value";
+                }
+                //var_dump($statement); die();
+            }
+        }
         return $statement;
     }
     
