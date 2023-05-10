@@ -41,7 +41,7 @@ use \SQLiteDB\Utils;
         </tbody>
     </table>
 
-    <?php if (defined('DATABASE_TYPE') && DATABASE_TYPE == 'sqlite' && defined('FQDB')) { ?>
+    <?php if (defined('DB_ENGINE') && DB_ENGINE == 'sqlite' && defined('FQDB')) { ?>
         <h3><?php _e('Your Database Status', 'sqlite-db') ?></h3>
         <table class="widefat page fixed" cellspacing="0" id="status">
             <thead>
@@ -234,7 +234,7 @@ use \SQLiteDB\Utils;
     }
     
     /*
-      switch (DATABASE_TYPE) {
+      switch (DB_ENGINE) {
       case 'sqlite':
       Utils::sqlite_info();
       break;

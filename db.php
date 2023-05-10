@@ -41,7 +41,7 @@ require_once('constant.php');
 
 if (defined('USE_MYSQL') && USE_MYSQL)
     return;
-if (!defined('DATABASE_TYPE') || (defined('DATABASE_TYPE') && DATABASE_TYPE != 'sqlite'))
+if (!defined('DB_ENGINE') || (defined('DB_ENGINE') && DB_ENGINE != 'sqlite'))
     return;
 
 function pdo_log_error($message, $data = null) {

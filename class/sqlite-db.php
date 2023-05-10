@@ -39,6 +39,9 @@ class SQLiteDb {
         add_action('admin_init', [$this, 'exec_actions']);
         add_action('plugins_loaded', [$this, 'textdomain_init']);
         
+        
+        add_action('plugins_loaded', [$this, 'apply_patch']);
+        
         // suppress all upgrade queries (not supported by SQLITE)
         //$queries = apply_filters( 'dbdelta_queries', $queries );
         //$cqueries = apply_filters( 'dbdelta_create_queries', $cqueries );
@@ -120,6 +123,17 @@ class SQLiteDb {
         }
         if (file_exists($target)) {
             unlink($target);
+        }
+    }
+    
+    public function apply_patch() {
+        $patches = glob(SQLITE_DB_PATH. 'patch'.DIRECTORY_SEPARATOR.'*.php');
+        if (defined('SQLITE_PATCH_DIR')) {
+            $patches = array_merge($patches, glob(SQLITE_PATCH_DIR.'*.php'));
+        }
+        //var_dump($patches); die();
+        foreach($patches as $patch) {
+            include_once($patch);
         }
     }
 
@@ -232,6 +246,7 @@ class SQLiteDb {
                         if (file_exists(FQDB)) {
                             $db_name = empty($_GET['db_name']) ? DB_NAME . '_'.time() : sanitize_title_with_dashes($_GET['db_name']);
                             copy(FQDB, FQDBDIR . $db_name . '.sqlite');
+                            // show_msg(__('A new backup has been created', 'sqlite-db'));
                         }
                         break;
                     case 'create':
@@ -257,8 +272,8 @@ class SQLiteDb {
                         if (!empty($_GET['db_name'])) {
                             $db_name = sanitize_title_with_dashes($_GET['db_name']);
                             $this->wp_update_global_config('DB_NAME', $db_name);
-                            if (!defined('DATABASE_TYPE') || DATABASE_TYPE != 'sqlite') {
-                                $this->wp_update_global_config('DATABASE_TYPE', 'sqlite');
+                            if (!defined('DB_ENGINE') || DB_ENGINE != 'sqlite') {
+                                $this->wp_update_global_config('DB_ENGINE', 'sqlite');
                             }
                             $redirect_url = admin_url(); 
                             $reload = true;
@@ -314,22 +329,23 @@ class SQLiteDb {
                         $alert = false;
                         break;
                     case 'switch':
-                        if (defined('DATABASE_TYPE') && DATABASE_TYPE == 'sqlite') {
-                            $this->wp_update_global_config('DATABASE_TYPE', '');
+                        if (defined('DB_ENGINE') && DB_ENGINE == 'sqlite') {
+                            $this->wp_update_global_config('DB_ENGINE', '');
                             // delete db.php
                         } else {
-                            $this->wp_update_global_config('DATABASE_TYPE', 'sqlite');
+                            $this->wp_update_global_config('DB_ENGINE', 'sqlite');
                         }
                         $redirect_url = admin_url(); 
                         $reload = true;
                         break;
                     case 'download':
-                        if (!empty($_GET['download']) && file_exists($_GET['download'])) {
+                        $dwn = empty($_GET['download']) ? FQDB : $_GET['download'];
+                        if (file_exists($dwn)) { 
                             header("Content-type: application/octet-stream");
-                            header('Content-Disposition: attachment; filename="' . basename($_GET['download']) . '";');
+                            header('Content-Disposition: attachment; filename="' . basename($dwn) . '";');
                             header("Pragma: no-cache");
                             header("Expires: 0");
-                            readfile($_GET['download']);
+                            readfile($dwn);
                             exit;
                         }
                         break;

@@ -1,4 +1,5 @@
 <?php
+//https://plugins.trac.wordpress.org/browser/sqlite-database-integration/trunk/wp-includes/sqlite/class-wp-sqlite-translator.php?rev=2869770
 /**
  * The queries translator.
  *

@@ -30,6 +30,8 @@ if (!defined('PDO_DEBUG')) {
  *
  */
 class PDODB extends \wpdb {
+    
+    public static $nulled_query = 'SELECT 1 ;';
 
     /**
      *
@@ -462,16 +464,246 @@ class PDODB extends \wpdb {
         // PRAGMA
         //https://www.sqlite.org/pragma.html
         
+        // CREATE
+        $statement = $this->create_unique_index($statement);
+        
+        // ALTER TABLE
+        $statement = $this->on_update($statement);
+        $statement = $this->add_column($statement);
         $statement = $this->empty_alter($statement);
         $statement = $this->strip_comment($statement);
-        $statement = $this->show_variables($statement);
         $statement = $this->strip_after($statement);
+        
+        // SHOW
+        $statement = $this->show($statement);
+        $statement = $this->describe($statement);
+        $statement = $this->show_variables($statement);
+       
+        // UPDATE
         $statement = $this->update_option_null($statement);
+        $statement = $this->update_order_by($statement);
+        $statement = $this->update_limit($statement);
+        
+        // DELETE
+        $statement = $this->delete_multiple($statement);
+        
+        // CHAR
+        $statement = $this->char_length($statement);
+        // DATE
+        $statement = $this->select_date($statement);
+        $statement = $this->select_date($statement, 'MONTH');
+        $statement = $this->select_date($statement, 'DAY');
+        
         if ($statement != $original) {
             do_action('sqlite-db/log', $original);
         }
         do_action('sqlite-db/log', $statement);
         return $statement;
+    }
+    
+    private function char_length($statement) {
+        // CHAR_LENGTH 
+        return str_replace(' CHAR_LENGTH(', ' LENGTH(', $statement);
+    }
+    
+    private function select_date($statement, $date = 'YEAR') {
+        //SELECT YEAR(post_date) AS `year`, MONTH(post_date) AS `month`, count(ID) as posts FROM wp_posts  WHERE post_type = 'post' AND post_status = 'publish' GROUP BY YEAR(post_date), MONTH(post_date) ORDER BY post_date DESC 
+        $str = " ".$date."(";
+        if (strpos($statement, $str) !== false) {
+            // TODO,
+            $pieces = explode($str, $statement);
+            $tmp = '';
+            foreach($pieces as $key => $piece) {
+                if ($key) {
+                    list($field, $more) = explode(')', $piece, 2);
+                    switch($date) {
+                        case 'DAY':
+                            $time = '%d';
+                            break;
+                        case 'MONTH':
+                            $time = '%m';
+                            break;
+                        case 'YEAR':
+                        default:
+                            $time = '%Y';
+                    }
+                    $tmp .= " strftime('".$time."', ".$field.")".$more;
+                } else {
+                    $tmp = $piece;
+                }
+            }
+            $statement = $tmp;
+        }
+        return $statement;
+    }
+    
+    private function delete_multiple($statement) {
+        //DELETE a, b FROM wp_options a, wp_options b WHERE a.option_name LIKE '_transient_%' AND a.option_name NOT LIKE '_transient_timeout_%' AND b.option_name = CONCAT( '_transient_timeout_', SUBSTRING( a.option_name, 12 ) )
+        if (str_starts_with($statement, "DELETE ")) {
+            // TODO
+            //$statement = "DELETE FROM wp_options WHERE option_name LIKE '_transient_%' AND option_name NOT LIKE '_transient_timeout_%'";
+        }
+        return $statement;
+    }
+    
+    private function drop_primary_key($statement) {
+        //ALTER TABLE wp_woocommerce_downloadable_product_permissions DROP PRIMARY KEY, ADD `permission_id` bigint(20) unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT;
+        if (str_starts_with($statement, "ALTER TABLE ")) {
+            $tmp = explode(' DROP PRIMARY KEY', $statement, 2); // drop column
+            if (count($tmp) == 2) {
+                $more = end($tmp);
+                if (trim($more)) {
+                    // strip drop, because is not supported
+                    // https://www.sqlite.org/lang_altertable.html#alter_table_drop_column
+                    $pre = reset($tmp);
+                    if ($more[0] == ',') {
+                        $more = substr($more, 1);
+                    }
+                    $statement = $pre.$more; // nulled query
+                } else {
+                    $statement = self::$nulled_query; // nulled query
+                }
+                $statement = str_replace(' ADD COLUMN COLUMN ', ' ADD COLUMN ', $statement); // check if is double
+            }
+        }
+        return $statement;
+    }
+    
+    private function create_unique_index($statement) {
+        return str_replace('CREATE UNIQUE INDEX ', 'CREATE INDEX ', $statement);
+    }
+    
+    private function add_column($statement) {
+        if (str_starts_with($statement, "ALTER TABLE ")) {
+            $statement = str_replace(' ADD ', ' ADD COLUMN ', $statement); // add column
+            $statement = str_replace(' ADD COLUMN COLUMN ', ' ADD COLUMN ', $statement); // check if is double
+        }
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function show($statement) {
+        //  SHOW KEYS FROM `wp_yoast_indexable`
+        // SHOW KEYS FROM wp_woocommerce_sessions WHERE Key_name = 'PRIMARY' AND Column_name = 'session_id'
+        if (str_starts_with($statement, "SHOW KEYS ") || str_starts_with($statement, "SHOW INDEX ") || str_starts_with($statement, "SHOW INDEXES ")) {
+            $tmp = explode(' ', $statement);
+            $table = $tmp[3];
+            $table = str_replace('`', '', $table);
+            $table = str_replace(';', '', $table);
+            $tmp = explode(' WHERE ', $statement, 2);
+            $where = '';
+            if (count($tmp) == 2) {
+                $where = ' AND '.end($tmp);
+                $where = str_replace("Key_name = 'PRIMARY'", 'pk <> 0', $where);
+                $where = str_replace('Column_name', 'name', $where);
+            }
+            $sql = 'SELECT * FROM pragma_table_info("'.$table.'") WHERE pk <> 0'.$where;
+            $indices = $this->dbh->query( $sql );
+            $tmp = '';
+            if (!empty($indices)) {
+                foreach ($indices as $index) {
+                    if ($tmp) $tmp .= ' UNION ';
+                    $null = $index->notnull == '0' ? 'YES' : '';
+                    $pk = intval($index->pk);
+                    //$default = $field->dflt_value ? $field->dflt_value : 'NULL';
+                    // cid, name, type, notnull, dflt_value, pk
+                    // https://dev.mysql.com/doc/refman/8.0/en/show-index.html
+                    $tmp .= "SELECT '".$table."' as 'Table', 0 as Non_unique, 'PRIMARY' as Key_name, ".$pk." as Seq_in_index, '".$index->name."' as Column_name, 'A' as Collation, ".$pk." as Cardinality, null as Sub_part, null as Packed, '".$null."' as 'Null', 'BTREE' as Index_type, '' as 'Comment', '' as Index_comment, 'YES' as Visible, null as Expression";
+                }
+                $statement = $tmp;
+            }
+        }
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function describe($statement) {
+        //DESCRIBE wp_wc_webhooks;
+        if (str_starts_with($statement, "DESCRIBE ") || str_starts_with($statement, "DESC ") || str_starts_with($statement, "EXPLAIN ")) {
+            $tmp = explode(' ', $statement);
+            $tmp = array_filter($tmp);
+            $table = $tmp[1];
+            $table = str_replace('`', '', $table);
+            $table = str_replace(';', '', $table);
+            $sql = 'SELECT * FROM pragma_table_info("'.$table.'")';
+            $fields = $this->dbh->query( $sql );
+            //var_dump($sql); var_dump($fields);
+            $tmp = '';
+            if (!empty($fields)) {
+                foreach ($fields as $field) {
+                    //var_dump($field); die();
+                    if ($tmp) $tmp .= ' UNION ';
+                    $null = $field->notnull == '0' ? 'YES' : '';
+                    $default = $field->dflt_value ? $field->dflt_value : 'NULL';
+                    $pk = $field->pk > 0 ? 'PRI' : '';
+                    // cid, name, type, notnull, dflt_value, pk
+                    $tmp .= "SELECT '".$field->name."' as Field, '".$field->type."' as Type, '".$null."' as 'Null', '".$pk."' as Key, ".$default." as 'Default', '' as Extra";
+                }
+                $statement = $tmp;
+            }
+            //var_dump($statement);
+        }
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function on_update($statement) {
+        // ALTER TABLE `wp_yoast_indexable` ADD `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP
+        if (str_starts_with($statement, "ALTER TABLE ")) {
+            $tmp = explode(" ON UPDATE ", $statement, 2);
+            $value = end($tmp);
+            if (count($tmp) > 1) {
+                $statement = reset($tmp);
+                list($pre, $more) = explode(' ADD ', $statement, 2);
+                
+                $tmp = explode(' ', $pre);
+                $tmp = array_filter($tmp);
+                $table = end($tmp);
+                $table = str_replace('`', '', $table);
+                
+                $tmp = explode(' ', $more);
+                $tmp = array_filter($tmp);
+                $field = reset($tmp);
+                $field = str_replace('`', '', $field);
+                
+                $pks = $this->get_pk($table);
+                $where = '';
+                foreach ($pks as $pk) {
+                    if ($where) $where .= ' AND ';
+                    $where .= $pk.' = old.'.$pk;
+                }
+                
+                $trigger = "CREATE TRIGGER [Update".$field."] AFTER UPDATE ON ".$table." FOR EACH ROW BEGIN UPDATE ".$table." SET ".$field." = ".$value." WHERE ".$where."; END";
+                $statement .= ';'.$trigger;
+                //do_action('sqlite-db/log', $statement);
+                //var_dump($statement); die();
+            }
+        }
+        return $statement;
+    }
+    
+    // Returns an array of columns by which rows can be uniquely adressed.
+    // For tables with a rowid column, this is always array('rowid')
+    // for tables without rowid, this is an array of the primary key columns. 
+    public function get_pk($table) {
+        $sql = 'SELECT l.name FROM pragma_table_info("'.$table.'") as l WHERE l.pk <> 0;';
+        $indices = $this->dbh->query( $sql, \PDO::FETCH_ASSOC );
+        //var_dump($indices); die();
+        //$indices = $query->fetchAll();
+        //$indices = $this->dbh->get_keys( $table, true);
+        return reset($indices);
     }
     
     /**
@@ -531,7 +763,7 @@ class PDODB extends \wpdb {
         if (str_starts_with($statement, "ALTER TABLE ")) {
             $tmp = explode("`", $statement);
             if (count($tmp) < 3 || trim($tmp[2]) == ';') {
-                $statement = 'SELECT 1 ;'; // nulled query
+                $statement = self::$nulled_query; // nulled query
             }
         }
         return $statement;
@@ -547,6 +779,44 @@ class PDODB extends \wpdb {
         $update_option_null = "UPDATE `" . $wpdb->options . "` SET `option_value` = NULL WHERE `option_name` = ";
         if (str_starts_with($statement, $update_option_null)) {
             $statement = str_replace($update_option_null, "DELETE FROM `" . $wpdb->options . "` WHERE `option_name` = ", $statement);
+        }
+        return $statement;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function update_order_by($statement) {
+        //UPDATE wp_posts SET post_password = 'cd3ecfbb4e0139860aaf', post_modified_gmt = '2023-05-03 08:19:55', post_modified = '2023-05-03 08:19:55' WHERE post_type = 'scheduled-action' AND post_status = 'pending' AND post_password = '' AND post_date_gmt <= '2023-05-03 08:19:55' ORDER BY menu_order ASC, post_date_gmt ASC, ID ASC LIMIT 25
+        if (str_starts_with($statement, 'UPDATE ')) {
+            $tmp = explode(" ORDER BY ", $statement, 2);
+            if (count($tmp) == 2) {
+                $pre = reset($tmp);
+                $more = end($tmp);
+                $more = str_replace(' DESC', ' ASC', $more);
+                $tmp = explode(' ASC', $more);
+                $statement = $pre.end($tmp);
+            }
+        }
+        return $statement;
+    }
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function update_limit($statement) {
+        //UPDATE wp_posts SET post_password = 'cd3ecfbb4e0139860aaf', post_modified_gmt = '2023-05-03 08:19:55', post_modified = '2023-05-03 08:19:55' WHERE post_type = 'scheduled-action' AND post_status = 'pending' AND post_password = '' AND post_date_gmt <= '2023-05-03 08:19:55' ORDER BY menu_order ASC, post_date_gmt ASC, ID ASC LIMIT 25
+        if (str_starts_with($statement, 'UPDATE ')) {
+            $tmp = explode(" LIMIT ", $statement, 2);
+            if (count($tmp) == 2) {
+                if (intval(end($tmp))) {
+                    $pre = reset($tmp);
+                    $statement = $pre;
+                }
+            }
         }
         return $statement;
     }

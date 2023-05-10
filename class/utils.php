@@ -847,7 +847,7 @@ JS;
             ?>
             <div class="card mt-4">
                 <div class="card-header">
-                    <h2><?php _e(DATABASE_TYPE); ?> - <small><?php _e('Database server'); ?></small></h2>
+                    <h2><?php _e(DB_ENGINE); ?> - <small><?php _e('Database server'); ?></small></h2>
                 </div>
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item">
@@ -880,7 +880,7 @@ JS;
         ?>
         <div class="card mt-4">
             <div class="card-header">
-                <h2><?php _e(DATABASE_TYPE); ?> - <small><?php _e('Database server'); ?></small></h2>
+                <h2><?php _e(DB_ENGINE); ?> - <small><?php _e('Database server'); ?></small></h2>
             </div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item">

@@ -3,7 +3,7 @@
         'name' => '__root__',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'cdd76d27adc8a932dfd3fa4e09dc57e21b0a64d9',
+        'reference' => '1e699b81b7918519d53a22b4acc486d017f00301',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         '__root__' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'cdd76d27adc8a932dfd3fa4e09dc57e21b0a64d9',
+            'reference' => '1e699b81b7918519d53a22b4acc486d017f00301',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -28,17 +28,6 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-        'phpmyadmin/sql-parser' => array(
-            'pretty_version' => 'dev-master',
-            'version' => 'dev-master',
-            'reference' => '4bfd15c40c6e7cec3592095cd405f52931af1b10',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../phpmyadmin/sql-parser',
-            'aliases' => array(
-                0 => '9999999-dev',
-            ),
-            'dev_requirement' => false,
-        ),
         'pilulka/mysql2sqlite' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
@@ -47,17 +36,6 @@
             'install_path' => __DIR__ . '/../pilulka/mysql2sqlite',
             'aliases' => array(
                 0 => '9999999-dev',
-            ),
-            'dev_requirement' => false,
-        ),
-        'symfony/polyfill-mbstring' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => 'f9c7affe77a00ae32ca127ca6833d034e6d33f25',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../symfony/polyfill-mbstring',
-            'aliases' => array(
-                0 => '1.28.x-dev',
             ),
             'dev_requirement' => false,
         ),

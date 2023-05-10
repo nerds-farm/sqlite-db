@@ -7,8 +7,6 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Vectorface\\MySQLite\\' => array($vendorDir . '/vectorface/mysqlite/src/Vectorface/MySQLite'),
-    'Symfony\\Polyfill\\Mbstring\\' => array($vendorDir . '/symfony/polyfill-mbstring'),
     'Pilulka\\Mysql2Sqlite\\' => array($vendorDir . '/pilulka/mysql2sqlite/src'),
-    'PhpMyAdmin\\SqlParser\\' => array($vendorDir . '/phpmyadmin/sql-parser/src'),
     'Ifsnop\\' => array($vendorDir . '/ifsnop/mysqldump-php/src/Ifsnop'),
 );

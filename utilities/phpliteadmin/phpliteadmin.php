@@ -414,7 +414,9 @@ if (is_readable($config_filename)) {
 //constants 1
 define("PROJECT", "phpLiteAdmin");
 define("VERSION", "1.9.8.2");
-define("FORCETYPE", false); //force the extension that will be used (set to false in almost all circumstances except debugging)
+if (!defined("FORCETYPE")) {
+    define("FORCETYPE", false); //force the extension that will be used (set to false in almost all circumstances except debugging)
+}
 define("SYSTEMPASSWORD", $password); // Makes things easier.
 define('PROJECT_URL', 'https://www.phpliteadmin.org/');
 define('DONATE_URL', 'https://www.phpliteadmin.org/donate/');
@@ -1522,7 +1524,7 @@ if ($auth->isAuthorized()) {
                             $error = true;
                     }
                 }
-                if ($error)
+                if (!empty($error))
                     $completed = $db->getError(true);
                 else
                     $completed = $lang['tbl'] . " '" . htmlencode($target_table) . "' " . $lang['altered'] . ".";
@@ -4656,9 +4658,13 @@ class Database {
                     $newcolumns = '';
                     $oldcolumns = '';
                     reset($newcols);
-                    while (list($key, $val) = each($newcols)) {
+                    for ($i = 0; $i < count($newcols); $i++) {
+                    //while (list($key, $val) = each($newcols)) {
+                        $key = key($newcols);
+                        $val = current($newcols);
                         $newcolumns .= ($newcolumns ? ', ' : '') . $this->quote_id($val);
                         $oldcolumns .= ($oldcolumns ? ', ' : '') . $this->quote_id($key);
+                        next($newcols);
                     }
                     $copytotempsql = 'INSERT INTO ' . $this->quote_id($tmpname) . '(' . $newcolumns . ') SELECT ' . $oldcolumns . ' FROM ' . $this->quote_id($table);
                     $dropoldsql = 'DROP TABLE ' . $this->quote_id($table);
@@ -4919,9 +4925,13 @@ class Database {
                     $newcolumns = '';
                     $oldcolumns = '';
                     reset($newcols);
-                    while (list($key, $val) = each($newcols)) {
+                    //while (list($key, $val) = each($newcols)) {
+                    for ($i = 0; $i < count($newcols); $i++) {
+                        $key = key($newcols);
+                        $val = current($newcols);
                         $newcolumns .= ($newcolumns ? ', ' : '') . $this->quote_id($val);
                         $oldcolumns .= ($oldcolumns ? ', ' : '') . $this->quote_id($key);
+                        next($newcols);
                     }
                     $copytonewsql = 'INSERT INTO ' . $this->quote_id($table_new) . '(' . $newcolumns . ') SELECT ' . $oldcolumns . ' FROM ' . $this->quote_id($tmpname);
                 }

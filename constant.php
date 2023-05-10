@@ -43,8 +43,8 @@ if (!defined('DB_FILE')) {
 }
 
 // Define SQLite constant.
-if ( ! defined( 'DATABASE_TYPE' ) ) {
-	define( 'DATABASE_TYPE', 'mysql' );
+if ( ! defined( 'DB_ENGINE' ) ) {
+	define( 'DB_ENGINE', 'mysql' );
 }
 
 if (!defined('DB_PATH')) {

@@ -19,6 +19,8 @@ This plugin enables you to create WordPress based web sites without MySQL databa
 
 SQLite Integration is a successor to [PDO for WordPress](http://wordpress.org/extend/plugins/pdo-for-wordpress) plugin, which unfortunately enough, doesn't seem to be maintained any more. SQLite Integration uses the basic idea and structures of that plugin and adds some utilities with more features.
 
+[Officially support SQLite in WordPress](https://make.wordpress.org/core/2023/04/19/status-update-on-the-sqlite-project/)
+
 = Features =
 
 SQLite Integration is a database access engine program, which means it's not like the other plugins. It must be used to install WordPress. Please read the install section. And see more detailed instruction in the [SQLite Integration Page](http://dogwood.skr.jp/wordpress/sqlite-integration/).

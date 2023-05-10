@@ -6,23 +6,14 @@ namespace Composer\Autoload;
 
 class ComposerStaticInitec1d034f5d6a4cc086e5e55a53d060d5
 {
-    public static $files = array (
-        '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
-    );
-
     public static $prefixLengthsPsr4 = array (
         'V' => 
         array (
             'Vectorface\\MySQLite\\' => 20,
         ),
-        'S' => 
-        array (
-            'Symfony\\Polyfill\\Mbstring\\' => 26,
-        ),
         'P' => 
         array (
             'Pilulka\\Mysql2Sqlite\\' => 21,
-            'PhpMyAdmin\\SqlParser\\' => 21,
         ),
         'I' => 
         array (
@@ -35,17 +26,9 @@ class ComposerStaticInitec1d034f5d6a4cc086e5e55a53d060d5
         array (
             0 => __DIR__ . '/..' . '/vectorface/mysqlite/src/Vectorface/MySQLite',
         ),
-        'Symfony\\Polyfill\\Mbstring\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
-        ),
         'Pilulka\\Mysql2Sqlite\\' => 
         array (
             0 => __DIR__ . '/..' . '/pilulka/mysql2sqlite/src',
-        ),
-        'PhpMyAdmin\\SqlParser\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/phpmyadmin/sql-parser/src',
         ),
         'Ifsnop\\' => 
         array (
