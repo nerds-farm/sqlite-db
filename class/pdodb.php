@@ -59,7 +59,8 @@ class PDODB extends \wpdb {
 
         $this->db_connect();
         add_action('sqlite-db/log', [$this, 'log'], 10, 2);
-        add_filter('sqlite-db/query', [$this, 'rewrite_query']);
+        add_filter('sqlite-db/query', [$this, 'fix_query']);
+        add_filter('pre_query_sqlite_db', [$this, 'rewrite_query'], 10, 5);
         add_filter('option_gmt_offset', function ($value, $option) {
             return intval($value);
         }, 10, 2);
@@ -456,36 +457,23 @@ class PDODB extends \wpdb {
         return $query;
     }
 
-    public function rewrite_query($statement) {
+    public function fix_query($statement) {
         $original = $statement;
         $statement = trim($statement);
         //do_action('sqlite-db/log', $original);
-
-        // PRAGMA
-        //https://www.sqlite.org/pragma.html
         
         // CREATE
         $statement = $this->create_unique_index($statement);
         
         // ALTER TABLE
-        $statement = $this->on_update($statement);
         $statement = $this->add_column($statement);
-        $statement = $this->empty_alter($statement);
         $statement = $this->strip_comment($statement);
         $statement = $this->strip_after($statement);
         
-        // SHOW
-        $statement = $this->show($statement);
-        $statement = $this->describe($statement);
-        $statement = $this->show_variables($statement);
-       
         // UPDATE
         $statement = $this->update_option_null($statement);
         $statement = $this->update_order_by($statement);
         $statement = $this->update_limit($statement);
-        
-        // DELETE
-        $statement = $this->delete_multiple($statement);
         
         // CHAR
         $statement = $this->char_length($statement);
@@ -497,8 +485,78 @@ class PDODB extends \wpdb {
         if ($statement != $original) {
             do_action('sqlite-db/log', $original);
         }
-        do_action('sqlite-db/log', $statement);
         return $statement;
+    }
+    
+    public function rewrite_query($pre, $translator, $statement, $mode, $fetch_mode_args) {        
+        
+        if ($pre) {
+            return $pre;
+        }
+        
+        $original = $statement;
+        $tmp = null;
+        
+        // PRAGMA
+        //https://www.sqlite.org/pragma.html
+        $tmp = $tmp ? $tmp : $this->pragma($statement);
+        
+        // SHOW
+        $tmp = $tmp ? $tmp : $this->show($statement);
+        $tmp = $tmp ? $tmp : $this->describe($statement);
+        $tmp = $tmp ? $tmp : $this->show_variables($statement);
+        
+        // DELETE
+        $tmp = $tmp ? $tmp : $this->delete_multiple($statement);
+        
+        // ALTER TABLE
+        $tmp = $tmp ? $tmp : $this->on_update($statement);
+        $tmp = $tmp ? $tmp : $this->add_index($statement);
+        $tmp = $tmp ? $tmp : $this->empty_alter($statement);
+        
+        do_action('sqlite-db/log', $original);
+        if ($tmp) {
+            
+            $statement = $tmp;
+            do_action('sqlite-db/log', $statement);
+  
+            try {
+                    // Perform all the queries in a nested transaction.
+                    $this->dbh->begin_transaction();
+
+                    do {
+                            $error = null;
+                            try {
+                                    $this->dbh->execute_mysql_query(
+                                            $statement
+                                    );
+                            } catch ( PDOException $error ) {
+                                    //if ( $error->getCode() !== self::SQLITE_BUSY ) {
+                                            throw $error;
+                                    //}
+                            }
+                    } while ( $error );
+
+                    // Commit the nested transaction.
+                    $this->dbh->commit();
+                    return $this->dbh->get_return_value();
+            } catch ( Exception $err ) {
+                    // Rollback the nested transaction.
+                    $this->dbh->rollback();
+                    if ( defined( 'PDO_DEBUG' ) && PDO_DEBUG === true ) {
+                            throw $err;
+                    }
+                    return $this->dbh->handle_error( $err );
+            }
+        }
+        return $pre;
+    }
+    
+    private function pragma($statement) {
+        if (str_starts_with($statement, "PRAGMA ")) {
+            return $statement;
+        }
+        return null;
     }
     
     private function char_length($statement) {
@@ -542,8 +600,9 @@ class PDODB extends \wpdb {
         if (str_starts_with($statement, "DELETE ")) {
             // TODO
             //$statement = "DELETE FROM wp_options WHERE option_name LIKE '_transient_%' AND option_name NOT LIKE '_transient_timeout_%'";
+            //return $statement;
         }
-        return $statement;
+        return null;
     }
     
     private function drop_primary_key($statement) {
@@ -575,10 +634,38 @@ class PDODB extends \wpdb {
     
     private function add_column($statement) {
         if (str_starts_with($statement, "ALTER TABLE ")) {
-            $statement = str_replace(' ADD ', ' ADD COLUMN ', $statement); // add column
-            $statement = str_replace(' ADD COLUMN COLUMN ', ' ADD COLUMN ', $statement); // check if is double
+            $statement = str_replace(' ADD `', ' ADD COLUMN `', $statement); // add column
+            //$statement = str_replace(' ADD COLUMN COLUMN ', ' ADD COLUMN ', $statement); // check if is double
+            //$statement = str_replace(' ADD COLUMN INDEX ', ' ADD INDEX ', $statement); // index?
+            //$statement = str_replace(' ADD COLUMN UNIQUE INDEX ', ' ADD UNIQUE INDEX ', $statement); // index?
         }
         return $statement;
+    }
+    
+    private function add_index($statement) {
+        //ALTER TABLE `wp_e_submissions_actions_log` ADD INDEX `submission_id_index` (`submission_id`),ADD INDEX `action_name_index` (`action_name` (191)),ADD INDEX `status_index` (`status`),ADD INDEX `created_at_gmt_index` (`created_at_gmt`),ADD INDEX `updated_at_gmt_index` (`updated_at_gmt`),ADD INDEX `created_at_index` (`created_at`),ADD INDEX `updated_at_index` (`updated_at`);
+        if (str_starts_with($statement, "ALTER TABLE ")) {
+            $statement = str_replace('ADD UNIQUE INDEX ', 'ADD INDEX ', $statement);
+            $statement = str_replace('ADD PRIMARY INDEX ', 'ADD INDEX ', $statement);
+            $statement = str_replace('ADD UNIQUE KEY ', 'ADD INDEX ', $statement);
+            $statement = str_replace('ADD PRIMARY KEY ', 'ADD INDEX ', $statement);
+            $statement = str_replace('ADD KEY ', 'ADD INDEX ', $statement);
+            $tmp = explode('ADD INDEX ', $statement);
+            if (count($tmp) > 1) {
+                $temp = explode(' ', array_shift($tmp));
+                $table = $temp[2];
+                //$table = str_replace('`', '', $table);
+                $temp = '';
+                foreach($tmp as $index) {
+                    list($index_name, $more) = explode('(', $index, 2);
+                    $more = str_replace('(', ')', $more); // (191)
+                    list($index_field, $none) = explode(')', $more, 2);
+                    $temp .= 'CREATE INDEX '.$index_name.' ON '.$table.' ('.$index_field.');';
+                }
+                return $temp;
+            }
+        }
+        return null;
     }
     
     /**
@@ -614,10 +701,11 @@ class PDODB extends \wpdb {
                     // https://dev.mysql.com/doc/refman/8.0/en/show-index.html
                     $tmp .= "SELECT '".$table."' as 'Table', 0 as Non_unique, 'PRIMARY' as Key_name, ".$pk." as Seq_in_index, '".$index->name."' as Column_name, 'A' as Collation, ".$pk." as Cardinality, null as Sub_part, null as Packed, '".$null."' as 'Null', 'BTREE' as Index_type, '' as 'Comment', '' as Index_comment, 'YES' as Visible, null as Expression";
                 }
-                $statement = $tmp;
+                //$statement = $tmp;
+                return $tmp;
             }
         }
-        return $statement;
+        return null;
     }
     
     /**
@@ -635,7 +723,7 @@ class PDODB extends \wpdb {
             $table = str_replace(';', '', $table);
             $sql = 'SELECT * FROM pragma_table_info("'.$table.'")';
             $fields = $this->dbh->query( $sql );
-            //var_dump($sql); var_dump($fields);
+            //var_dump($sql); var_dump($fields); die();
             $tmp = '';
             if (!empty($fields)) {
                 foreach ($fields as $field) {
@@ -647,11 +735,12 @@ class PDODB extends \wpdb {
                     // cid, name, type, notnull, dflt_value, pk
                     $tmp .= "SELECT '".$field->name."' as Field, '".$field->type."' as Type, '".$null."' as 'Null', '".$pk."' as Key, ".$default." as 'Default', '' as Extra";
                 }
-                $statement = $tmp;
+                //$statement = $tmp;
+                return $tmp;
             }
             //var_dump($statement);
         }
-        return $statement;
+        return null;
     }
     
     /**
@@ -689,9 +778,10 @@ class PDODB extends \wpdb {
                 $statement .= ';'.$trigger;
                 //do_action('sqlite-db/log', $statement);
                 //var_dump($statement); die();
+                return $statement;
             }
         }
-        return $statement;
+        return null;
     }
     
     // Returns an array of columns by which rows can be uniquely adressed.
@@ -746,9 +836,10 @@ class PDODB extends \wpdb {
                     $statement .= "SELECT '".$akey."' as Variable_name, '".$avar."' as Value";
                 }
                 //var_dump($statement); die();
+                return $statement;
             }
         }
-        return $statement;
+        return null;
     }
     
     /**
@@ -763,10 +854,10 @@ class PDODB extends \wpdb {
         if (str_starts_with($statement, "ALTER TABLE ")) {
             $tmp = explode("`", $statement);
             if (count($tmp) < 3 || trim($tmp[2]) == ';') {
-                $statement = self::$nulled_query; // nulled query
+                return self::$nulled_query; // nulled query
             }
         }
-        return $statement;
+        return null;
     }
 
     /**

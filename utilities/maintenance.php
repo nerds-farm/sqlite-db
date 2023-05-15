@@ -171,12 +171,11 @@ class SQLiteDbMaintenance {
         //var_dump($columns_to_check);
         foreach ($tables as $table) {
             $col_infos = $wpdb->get_results("SHOW COLUMNS FROM $table");
-            //var_dump($col_infos);
             foreach ($col_infos as $col) {
                 if (!empty($columns_to_check[$table]) 
-                        && array_key_exists($col->name, $columns_to_check[$table]) 
-                        && $col->dflt_value != $columns_to_check[$table][$col->name]) {
-                    $results_table[$table] = 'damaged: field "'.$col->name. '" has default value '.$col->dflt_value.' should be '.$columns_to_check[$table][$col->name];
+                        && array_key_exists($col->Field, $columns_to_check[$table]) 
+                        && $col->Default != $columns_to_check[$table][$col->Field]) {
+                    $results_table[$table] = 'damaged: field "'.$col->Field. '" has default value '.$col->Default.' should be '.$columns_to_check[$table][$col->Field];
                     break;
                 }
             }

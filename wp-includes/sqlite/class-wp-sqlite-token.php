@@ -221,7 +221,7 @@ class WP_SQLite_Token {
 		return (
 			( null === $type || $this->type === $type )
 			&& ( null === $flags || ( $this->flags & $flags ) )
-			&& ( null === $values || in_array( strtoupper( $this->value ), $values, true ) )
+			&& ( null === $values || ($this->value && in_array( strtoupper( $this->value ), $values, true )) )
 		);
 	}
 
