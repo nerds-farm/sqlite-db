@@ -41,7 +41,9 @@ use \SQLiteDB\Utils;
         </tbody>
     </table>
 
-    <?php if (defined('DB_ENGINE') && DB_ENGINE == 'sqlite' && defined('FQDB')) { ?>
+    <?php
+    if (defined('FQDB') && defined('DB_CONTENT') && defined('DB_ENGINE') && 'sqlite' === DB_ENGINE) {
+        ?>
         <h3><?php _e('Your Database Status', 'sqlite-db') ?></h3>
         <table class="widefat page fixed" cellspacing="0" id="status">
             <thead>
@@ -126,7 +128,6 @@ use \SQLiteDB\Utils;
             </tbody>
         </table>
 
-
         <br>
         <hr>
 
@@ -140,7 +141,7 @@ use \SQLiteDB\Utils;
                 echo '<ul>';
                 foreach ($check_results as $table => $damaged) {
                     $message = __(' needs restoring', 'sqlite-db');
-                    echo '<li><span class="em">' . $table . '</span>' . $message . ' ('.$damaged.') </li>';
+                    echo '<li><span class="em">' . $table . '</span>' . $message . ' (' . $damaged . ') </li>';
                 }
                 echo '</ul>';
                 $fix_url = admin_url('options-general.php?page=sqlite-db&section=info&action=fix#fix-db');
@@ -232,7 +233,7 @@ use \SQLiteDB\Utils;
           <?php
          */
     }
-    
+
     /*
       switch (DB_ENGINE) {
       case 'sqlite':
@@ -293,7 +294,7 @@ use \SQLiteDB\Utils;
             <h2><?php _e('SQLite DB Error Log', 'sqlite-db') ?></h2>
             <textarea placeholder="<?php _e('No error messages are found', 'sqlite-db') ?>" rows="10" style="width:100%;"><?php echo $debug; ?></textarea>
         </div>
-<?php } ?>
+    <?php } ?>
 
 
 </div>

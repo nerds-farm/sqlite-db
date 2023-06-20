@@ -349,6 +349,30 @@ class SQLiteDb {
                             exit;
                         }
                         break;
+                    case 'translate':
+                        if (!empty($_GET['sql'])) {
+                            $sql = trim($_GET['sql']);
+                            $sql = str_replace("\'", "'", $sql);
+                            if (!empty($sql)) { 
+                                add_filter('pre_query_sqlite_db', function($pre, $translator, $statement, $mode, $fetch_mode_args) use ($sql) {
+                                    echo '<br><br><b>ORIGINAL:</b><br>';
+                                    echo $sql;
+                                    echo '<br>---------------------<br><b>TRANSLATED:</b><br>';
+                                    if ($pre) {
+                                        echo $pre;
+                                        die();
+                                    }
+                                    if ($statement) {
+                                        echo $statement;
+                                        die();
+                                    }
+                                }, 99, 5);
+                                echo '<a href="'.$redirect_url.'">BACK</a>';
+                                global $wpdb;
+                                $wpdb->query($sql);
+                            }
+                        }
+                        break;
                 }
 
                 /*

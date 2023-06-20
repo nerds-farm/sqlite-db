@@ -506,6 +506,9 @@ class PDODB extends \wpdb {
         $tmp = $tmp ? $tmp : $this->describe($statement);
         $tmp = $tmp ? $tmp : $this->show_variables($statement);
         
+        // INSERT
+        //$tmp = $tmp ? $tmp : $this->on_duplicate($statement);
+        
         // DELETE
         $tmp = $tmp ? $tmp : $this->delete_multiple($statement);
         
@@ -513,6 +516,8 @@ class PDODB extends \wpdb {
         $tmp = $tmp ? $tmp : $this->on_update($statement);
         $tmp = $tmp ? $tmp : $this->add_index($statement);
         $tmp = $tmp ? $tmp : $this->empty_alter($statement);
+        
+        if (isset($_GET['action']) && $_GET['action'] == 'translate') return $tmp;
         
         do_action('sqlite-db/log', $original);
         if ($tmp) {
@@ -675,6 +680,7 @@ class PDODB extends \wpdb {
      */
     private function show($statement) {
         //  SHOW KEYS FROM `wp_yoast_indexable`
+        // SHOW INDEX FROM wp_comments WHERE column_name = 'comment_type' and key_name = 'woo_idx_comment_type'
         // SHOW KEYS FROM wp_woocommerce_sessions WHERE Key_name = 'PRIMARY' AND Column_name = 'session_id'
         if (str_starts_with($statement, "SHOW KEYS ") || str_starts_with($statement, "SHOW INDEX ") || str_starts_with($statement, "SHOW INDEXES ")) {
             $tmp = explode(' ', $statement);
@@ -739,6 +745,67 @@ class PDODB extends \wpdb {
                 return $tmp;
             }
             //var_dump($statement);
+        }
+        return null;
+    }
+    
+    /**
+     * Method to strip column after
+     *
+     * @access private
+     */
+    private function on_duplicate($statement) {
+        // INSERT INTO `wp_options` (`option_name`, `option_value`, `autoload`) VALUES ('_transient_doing_cron', '1684255896.5588810443878173828125', 'yes') ON DUPLICATE KEY UPDATE `option_name` = VALUES(`option_name`), `option_value` = VALUES(`option_value`), `autoload` = VALUES(`autoload`)
+        if (str_starts_with($statement, "INSERT INTO ")) {
+            $tmp = explode(" ON DUPLICATE KEY UPDATE ", $statement, 2);
+            //var_dump($statement); die();
+            $keys = end($tmp);
+            if (count($tmp) > 1) {
+                $statement = reset($tmp);
+                $temp = str_replace('(', '', $statement);
+                $temp = str_replace(')', '', $temp);
+                list($fields, $values) = explode(' VALUES ', $temp);
+                
+                $tmp = explode(' ', $fields, 4);
+                $tmp = array_filter($tmp);
+                $table = $tmp[2];
+                $table = str_replace('`', '', $table);
+                
+                $fields = explode(',', end($tmp));
+                $values = explode(',', $values);
+                $values = array_filter($values);
+                if (count($fields) == count($values)) {
+                    foreach ($fields as $key => $field) {
+                        $field = trim(str_replace('`', '', $field));
+                        $values[$field] = $values[$key];
+                    }
+                }
+                
+                $tmp = explode('VALUES(', $keys);
+                $pks = [];
+                foreach($tmp as $key => $value) {
+                    if ($key) {
+                        list($field, $more) = explode(')', $value, 2);
+                        $field = trim(str_replace('`', '', $field));
+                        $pks[] = $field;
+                    }
+                }
+                //var_dump($pks); var_dump($values); die();
+                $delete = 'DELETE FROM '.$table.' WHERE ';
+                $where = '';
+                foreach ($pks as $key => $pk) {
+                    if ($where) $where .= ' AND ';
+                    if (!empty($values[$pk])) {
+                       $where .= $pk.' = '.$values[$pk];
+                    }
+                }
+                if ($where) {
+                    $statement = $delete.$where.';'.$statement;   
+                    //do_action('sqlite-db/log', $statement);
+                    //var_dump($statement); die();
+                    return $statement;
+                }            
+            }
         }
         return null;
     }

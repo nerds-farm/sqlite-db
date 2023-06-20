@@ -18,7 +18,7 @@
 function sqlite_db_plugin_adminbar_item( $admin_bar ) {
 	global $wpdb;
 
-	if ( defined( 'FQDB' ) && defined( 'DB_ENGINE' ) && 'sqlite' === DB_ENGINE ) {
+	if ( defined( 'FQDB' ) && defined('DB_CONTENT') && defined( 'DB_ENGINE' ) && 'sqlite' === DB_ENGINE ) {
 		$title = '<span style="color:#46B450;">' . __( 'DB: SQLite', 'performance-lab' ) . '</span>';
 	} elseif ( stripos( $wpdb->db_server_info(), 'maria' ) !== false ) {
 		$title = '<span style="color:#DC3232;">' . __( 'DB: MariaDB', 'performance-lab' ) . '</span>';

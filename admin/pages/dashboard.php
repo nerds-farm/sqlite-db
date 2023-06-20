@@ -18,7 +18,7 @@
         <h2><?php _e('Install db.php', 'sqlite-db'); ?></h2>
         <p><?php _e('You need to install the db.php file on your /wp-content folder to let the magic happens.', 'sqlite-db'); ?></p>
         <a class="button button-primary" href="?page=sqlite-db&action=install" class="button"><?php _e('Install db.php automatically', 'sqlite-db'); ?></a>
-        <p><?php _e('Hint: you can install it manually, copy the file db.copy.php from inside plugin this folder into the /wp-content folder and rename it in db.php', 'sqlite-db'); ?></p>
+        <p><?php _e('Hint: you can install it manually, copy the file db.copy.php from inside this plugin folder into the /wp-content folder and rename it in db.php', 'sqlite-db'); ?></p>
         <?php
     }
     ?>
@@ -40,7 +40,7 @@
 <?php
 ob_start();
 ?>
-<?php if (!defined('DB_ENGINE') || DB_ENGINE == 'mysql') { ?>
+<?php if (!defined('DB_ENGINE') || DB_ENGINE == 'mysql' || !defined('DB_CONTENT')) { ?>
     <p><?php _e('You are actually running your WP from a MySQL Database, so you can create a copy of current MySQL DB to a new SQLite to use later:', 'sqlite-db'); ?></p>
     <a href="?page=sqlite-db&action=migrate" class="button"><?php _e('Clone current DB from MySQL to SQLite', 'sqlite-db'); ?></a>
 <?php } ?>
@@ -184,6 +184,19 @@ if (defined('DB_CONTENT')) {
             </div>
         <?php
         }
+        
+        ?>
+        <div class="card">
+            <h2><?php _e('Test Query Translator', 'sqlite-db'); ?></h2>
+            <p><?php _e('Simulate the execution of a SQL query and check the translated SQLite query.', 'sqlite-db'); ?></p>
+            <form action="?" method="GET">
+                <input type="hidden" name="page" value="sqlite-db" />
+                <input type="hidden" name="action" value="translate" />
+                <input type="text" name="sql" placeholder="SELECT * FROM wp_post WHERE ...">
+                <input type="submit" value="<?php _e('Translate', 'sqlite-db'); ?>" class="button">
+            </form>
+        </div>
+        <?php
     }
 }
 
