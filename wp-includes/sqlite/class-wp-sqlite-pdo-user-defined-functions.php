@@ -223,7 +223,7 @@ class WP_SQLite_PDO_User_Defined_Functions {
 		 * From https://www.php.net/manual/en/datetime.format.php:
 		 *
 		 * n - Numeric representation of a month, without leading zeros.
-		 * 	   1 through 12
+		 *     1 through 12
 		 */
 		return intval( gmdate( 'n', strtotime( $field ) ) );
 	}
@@ -448,14 +448,14 @@ class WP_SQLite_PDO_User_Defined_Functions {
 	 *
 	 * As 'IF' is a reserved word for PHP, function name must be changed.
 	 *
-	 * @param unknonw $expression the statement to be evaluated as true or false.
-	 * @param unknown $true statement or value returned if $expression is true.
-	 * @param unknown $false statement or value returned if $expression is false.
+	 * @param mixed $expression The statement to be evaluated as true or false.
+	 * @param mixed $truthy     Statement or value returned if $expression is true.
+	 * @param mixed $falsy      Statement or value returned if $expression is false.
 	 *
-	 * @return unknown
+	 * @return mixed
 	 */
-	public function _if( $expression, $true, $false ) {
-		return ( true === $expression ) ? $true : $false;
+	public function _if( $expression, $truthy, $falsy ) {
+		return ( true === $expression ) ? $truthy : $falsy;
 	}
 
 	/**

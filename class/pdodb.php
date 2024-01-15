@@ -30,7 +30,7 @@ if (!defined('PDO_DEBUG')) {
  *
  */
 class PDODB extends \wpdb {
-    
+
     public static $nulled_query = 'SELECT 1 ;';
 
     /**
@@ -61,6 +61,8 @@ class PDODB extends \wpdb {
         add_action('sqlite-db/log', [$this, 'log'], 10, 2);
         add_filter('sqlite-db/query', [$this, 'fix_query']);
         add_filter('pre_query_sqlite_db', [$this, 'rewrite_query'], 10, 5);
+
+        // fix WP bug
         add_filter('option_gmt_offset', function ($value, $option) {
             return intval($value);
         }, 10, 2);
@@ -184,10 +186,10 @@ class PDODB extends \wpdb {
                 $str = '';
         }
         $EZSQL_ERROR[] = array('query' => $this->last_query, 'error_str' => $str);
-        
+
         $query = $this->last_query;
         do_action('sqlite-db/log', $query, true);
-            
+
         if ($this->suppress_errors)
             return false;
 
@@ -257,7 +259,16 @@ class PDODB extends \wpdb {
             $pdo = $GLOBALS['@pdo'];
         }
 
-        $sqlite_includes = SQLITE_DB_PATH . 'wp-includes' . DIRECTORY_SEPARATOR . 'sqlite' . DIRECTORY_SEPARATOR;
+
+        $sqlite_includes_folder = 'wp-includes' . DIRECTORY_SEPARATOR . 'sqlite' . DIRECTORY_SEPARATOR;
+
+        // if sqlite-database-integration installed load wp-includes and ovveride class
+        //if (defined('SQLITE_MAIN_FILE')) {
+        //    $sqlite_includes = dirname(SQLITE_MAIN_FILE) . $sqlite_includes_folder;
+        //} else {
+            $sqlite_includes = SQLITE_DB_PATH . $sqlite_includes_folder;
+        //}
+
         require_once $sqlite_includes . 'class-wp-sqlite-lexer.php';
         require_once $sqlite_includes . 'class-wp-sqlite-query-rewriter.php';
         require_once $sqlite_includes . 'class-wp-sqlite-translator.php';
@@ -265,8 +276,10 @@ class PDODB extends \wpdb {
         require_once $sqlite_includes . 'class-wp-sqlite-pdo-user-defined-functions.php';
         require_once $sqlite_includes . 'class-wp-sqlite-db.php';
         require_once $sqlite_includes . 'install-functions.php';
-        $this->dbh = new \WP_SQLite_Translator($pdo);
-        
+
+        require_once SQLITE_DB_PATH . 'class' . DIRECTORY_SEPARATOR . 'class-wp-sqlite-db-translator.php';
+        $this->dbh = new WP_SQLiteDB_Translator($pdo);
+
         $this->last_error = $this->dbh->get_error_message();
         if (!empty($this->last_error)) {
             return false;
@@ -277,17 +290,17 @@ class PDODB extends \wpdb {
             $this->bail(sprintf(__("<h1>Error establlishing a database connection</h1><p>We have been unable to connect to the specified database. <br />The error message received was %s"), $this->dbh->errorInfo()));
             return;
         }
-        
+
         $GLOBALS['@pdo'] = $this->dbh->get_pdo();
-        
+
         // Create compatibility functions for use within that database connection.
         $vendor = SQLITE_DB_PATH . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
         if (file_exists($vendor)) {
             require_once $vendor;
             $pdo = $this->dbh->get_pdo();
-            $this->dbh->set_pdo( \Vectorface\MySQLite\MySQLite::createFunctions($pdo) );
+            $this->dbh->set_pdo(\Vectorface\MySQLite\MySQLite::createFunctions($pdo));
         }
-        
+
         $this->has_connected = true;
         $this->ready = true;
     }
@@ -428,6 +441,15 @@ class PDODB extends \wpdb {
     }
 
     /**
+     * Retrieves full database server information.
+     *
+     * @return string|false Server info on success, false on failure.
+     */
+    public function db_server_info() {
+        return \SQLite3::version()['versionString'];
+    }
+
+    /**
      * Replaces any parameter placeholders in a query with the value of that
      * parameter. Useful for debugging. Assumes anonymous parameters from 
      * $params are are in the same order as specified in $query
@@ -461,125 +483,124 @@ class PDODB extends \wpdb {
         $original = $statement;
         $statement = trim($statement);
         //do_action('sqlite-db/log', $original);
-        
         // CREATE
         $statement = $this->create_unique_index($statement);
-        
+
         // ALTER TABLE
         $statement = $this->add_column($statement);
         $statement = $this->strip_comment($statement);
         $statement = $this->strip_after($statement);
-        
+
         // UPDATE
         $statement = $this->update_option_null($statement);
         $statement = $this->update_order_by($statement);
         $statement = $this->update_limit($statement);
-        
+
         // CHAR
         $statement = $this->char_length($statement);
         // DATE
         $statement = $this->select_date($statement);
         $statement = $this->select_date($statement, 'MONTH');
         $statement = $this->select_date($statement, 'DAY');
-        
+
         if ($statement != $original) {
             do_action('sqlite-db/log', $original);
         }
         return $statement;
     }
-    
-    public function rewrite_query($pre, $translator, $statement, $mode, $fetch_mode_args) {        
-        
+
+    public function rewrite_query($pre, $translator, $statement, $mode, $fetch_mode_args) {
+
         if ($pre) {
             return $pre;
         }
-        
+
         $original = $statement;
         $tmp = null;
-        
+
         // PRAGMA
         //https://www.sqlite.org/pragma.html
         $tmp = $tmp ? $tmp : $this->pragma($statement);
-        
+
         // SHOW
         $tmp = $tmp ? $tmp : $this->show($statement);
         $tmp = $tmp ? $tmp : $this->describe($statement);
         $tmp = $tmp ? $tmp : $this->show_variables($statement);
-        
+
         // INSERT
         //$tmp = $tmp ? $tmp : $this->on_duplicate($statement);
-        
         // DELETE
         $tmp = $tmp ? $tmp : $this->delete_multiple($statement);
-        
+
         // ALTER TABLE
         $tmp = $tmp ? $tmp : $this->on_update($statement);
         $tmp = $tmp ? $tmp : $this->add_index($statement);
         $tmp = $tmp ? $tmp : $this->empty_alter($statement);
-        
-        if (isset($_GET['action']) && $_GET['action'] == 'translate') return $tmp;
-        
+
+        if (isset($_GET['action']) && $_GET['action'] == 'translate')
+            return $tmp;
+
         do_action('sqlite-db/log', $original);
         if ($tmp) {
-            
+
             $statement = $tmp;
             do_action('sqlite-db/log', $statement);
-  
+
             try {
-                    // Perform all the queries in a nested transaction.
-                    $this->dbh->begin_transaction();
+                // Perform all the queries in a nested transaction.
+                $this->dbh->begin_transaction();
 
-                    do {
-                            $error = null;
-                            try {
-                                    $this->dbh->execute_mysql_query(
-                                            $statement
-                                    );
-                            } catch ( PDOException $error ) {
-                                    //if ( $error->getCode() !== self::SQLITE_BUSY ) {
-                                            throw $error;
-                                    //}
-                            }
-                    } while ( $error );
-
-                    // Commit the nested transaction.
-                    $this->dbh->commit();
-                    return $this->dbh->get_return_value();
-            } catch ( Exception $err ) {
-                    // Rollback the nested transaction.
-                    $this->dbh->rollback();
-                    if ( defined( 'PDO_DEBUG' ) && PDO_DEBUG === true ) {
-                            throw $err;
+                do {
+                    $error = null;
+                    try {
+                        $this->dbh->execute_mysql_query(
+                                $statement
+                        );
+                    } catch (PDOException $error) {
+                        //if ( $error->getCode() !== self::SQLITE_BUSY ) {
+                        throw $error;
+                        //}
                     }
-                    return $this->dbh->handle_error( $err );
+                } while ($error);
+
+                // Commit the nested transaction.
+                $this->dbh->commit();
+                return $this->dbh->get_return_value();
+            } catch (Exception $err) {
+                // Rollback the nested transaction.
+                $this->dbh->rollback();
+                if (defined('PDO_DEBUG') && PDO_DEBUG === true) {
+                    throw $err;
+                }
+                return $this->dbh->handle_error($err);
             }
         }
         return $pre;
     }
-    
+
     private function pragma($statement) {
         if (str_starts_with($statement, "PRAGMA ")) {
             return $statement;
         }
         return null;
     }
-    
+
     private function char_length($statement) {
         // CHAR_LENGTH 
         return str_replace(' CHAR_LENGTH(', ' LENGTH(', $statement);
     }
-    
+
     private function select_date($statement, $date = 'YEAR') {
         //SELECT YEAR(post_date) AS `year`, MONTH(post_date) AS `month`, count(ID) as posts FROM wp_posts  WHERE post_type = 'post' AND post_status = 'publish' GROUP BY YEAR(post_date), MONTH(post_date) ORDER BY post_date DESC 
-        $str = " ".$date."(";
+        $str = " " . $date . "(";
         if (strpos($statement, $str) !== false) {
             // TODO,
             $pieces = explode($str, $statement);
             $tmp = '';
-            foreach($pieces as $key => $piece) {
+            foreach ($pieces as $key => $piece) {
                 if ($key) {
                     list($field, $more) = explode(')', $piece, 2);
-                    switch($date) {
+                    switch ($date) {
                         case 'DAY':
                             $time = '%d';
                             break;
@@ -590,7 +611,7 @@ class PDODB extends \wpdb {
                         default:
                             $time = '%Y';
                     }
-                    $tmp .= " strftime('".$time."', ".$field.")".$more;
+                    $tmp .= " strftime('" . $time . "', " . $field . ")" . $more;
                 } else {
                     $tmp = $piece;
                 }
@@ -599,7 +620,7 @@ class PDODB extends \wpdb {
         }
         return $statement;
     }
-    
+
     private function delete_multiple($statement) {
         //DELETE a, b FROM wp_options a, wp_options b WHERE a.option_name LIKE '_transient_%' AND a.option_name NOT LIKE '_transient_timeout_%' AND b.option_name = CONCAT( '_transient_timeout_', SUBSTRING( a.option_name, 12 ) )
         if (str_starts_with($statement, "DELETE ")) {
@@ -609,7 +630,7 @@ class PDODB extends \wpdb {
         }
         return null;
     }
-    
+
     private function drop_primary_key($statement) {
         //ALTER TABLE wp_woocommerce_downloadable_product_permissions DROP PRIMARY KEY, ADD `permission_id` bigint(20) unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT;
         if (str_starts_with($statement, "ALTER TABLE ")) {
@@ -623,7 +644,7 @@ class PDODB extends \wpdb {
                     if ($more[0] == ',') {
                         $more = substr($more, 1);
                     }
-                    $statement = $pre.$more; // nulled query
+                    $statement = $pre . $more; // nulled query
                 } else {
                     $statement = self::$nulled_query; // nulled query
                 }
@@ -632,11 +653,11 @@ class PDODB extends \wpdb {
         }
         return $statement;
     }
-    
+
     private function create_unique_index($statement) {
         return str_replace('CREATE UNIQUE INDEX ', 'CREATE INDEX ', $statement);
     }
-    
+
     private function add_column($statement) {
         if (str_starts_with($statement, "ALTER TABLE ")) {
             $statement = str_replace(' ADD `', ' ADD COLUMN `', $statement); // add column
@@ -646,7 +667,7 @@ class PDODB extends \wpdb {
         }
         return $statement;
     }
-    
+
     private function add_index($statement) {
         //ALTER TABLE `wp_e_submissions_actions_log` ADD INDEX `submission_id_index` (`submission_id`),ADD INDEX `action_name_index` (`action_name` (191)),ADD INDEX `status_index` (`status`),ADD INDEX `created_at_gmt_index` (`created_at_gmt`),ADD INDEX `updated_at_gmt_index` (`updated_at_gmt`),ADD INDEX `created_at_index` (`created_at`),ADD INDEX `updated_at_index` (`updated_at`);
         if (str_starts_with($statement, "ALTER TABLE ")) {
@@ -661,18 +682,18 @@ class PDODB extends \wpdb {
                 $table = $temp[2];
                 //$table = str_replace('`', '', $table);
                 $temp = '';
-                foreach($tmp as $index) {
+                foreach ($tmp as $index) {
                     list($index_name, $more) = explode('(', $index, 2);
                     $more = str_replace('(', ')', $more); // (191)
                     list($index_field, $none) = explode(')', $more, 2);
-                    $temp .= 'CREATE INDEX '.$index_name.' ON '.$table.' ('.$index_field.');';
+                    $temp .= 'CREATE INDEX ' . $index_name . ' ON ' . $table . ' (' . $index_field . ');';
                 }
                 return $temp;
             }
         }
         return null;
     }
-    
+
     /**
      * Method to strip column after
      *
@@ -690,22 +711,23 @@ class PDODB extends \wpdb {
             $tmp = explode(' WHERE ', $statement, 2);
             $where = '';
             if (count($tmp) == 2) {
-                $where = ' AND '.end($tmp);
+                $where = ' AND ' . end($tmp);
                 $where = str_replace("Key_name = 'PRIMARY'", 'pk <> 0', $where);
                 $where = str_replace('Column_name', 'name', $where);
             }
-            $sql = 'SELECT * FROM pragma_table_info("'.$table.'") WHERE pk <> 0'.$where;
-            $indices = $this->dbh->query( $sql );
+            $sql = 'SELECT * FROM pragma_table_info("' . $table . '") WHERE pk <> 0' . $where;
+            $indices = $this->dbh->query($sql);
             $tmp = '';
             if (!empty($indices)) {
                 foreach ($indices as $index) {
-                    if ($tmp) $tmp .= ' UNION ';
+                    if ($tmp)
+                        $tmp .= ' UNION ';
                     $null = $index->notnull == '0' ? 'YES' : '';
                     $pk = intval($index->pk);
                     //$default = $field->dflt_value ? $field->dflt_value : 'NULL';
                     // cid, name, type, notnull, dflt_value, pk
                     // https://dev.mysql.com/doc/refman/8.0/en/show-index.html
-                    $tmp .= "SELECT '".$table."' as 'Table', 0 as Non_unique, 'PRIMARY' as Key_name, ".$pk." as Seq_in_index, '".$index->name."' as Column_name, 'A' as Collation, ".$pk." as Cardinality, null as Sub_part, null as Packed, '".$null."' as 'Null', 'BTREE' as Index_type, '' as 'Comment', '' as Index_comment, 'YES' as Visible, null as Expression";
+                    $tmp .= "SELECT '" . $table . "' as 'Table', 0 as Non_unique, 'PRIMARY' as Key_name, " . $pk . " as Seq_in_index, '" . $index->name . "' as Column_name, 'A' as Collation, " . $pk . " as Cardinality, null as Sub_part, null as Packed, '" . $null . "' as 'Null', 'BTREE' as Index_type, '' as 'Comment', '' as Index_comment, 'YES' as Visible, null as Expression";
                 }
                 //$statement = $tmp;
                 return $tmp;
@@ -713,7 +735,7 @@ class PDODB extends \wpdb {
         }
         return null;
     }
-    
+
     /**
      * Method to strip column after
      *
@@ -727,19 +749,20 @@ class PDODB extends \wpdb {
             $table = $tmp[1];
             $table = str_replace('`', '', $table);
             $table = str_replace(';', '', $table);
-            $sql = 'SELECT * FROM pragma_table_info("'.$table.'")';
-            $fields = $this->dbh->query( $sql );
+            $sql = 'SELECT * FROM pragma_table_info("' . $table . '")';
+            $fields = $this->dbh->query($sql);
             //var_dump($sql); var_dump($fields); die();
             $tmp = '';
             if (!empty($fields)) {
                 foreach ($fields as $field) {
                     //var_dump($field); die();
-                    if ($tmp) $tmp .= ' UNION ';
+                    if ($tmp)
+                        $tmp .= ' UNION ';
                     $null = $field->notnull == '0' ? 'YES' : '';
                     $default = $field->dflt_value ? $field->dflt_value : 'NULL';
                     $pk = $field->pk > 0 ? 'PRI' : '';
                     // cid, name, type, notnull, dflt_value, pk
-                    $tmp .= "SELECT '".$field->name."' as Field, '".$field->type."' as Type, '".$null."' as 'Null', '".$pk."' as Key, ".$default." as 'Default', '' as Extra";
+                    $tmp .= "SELECT '" . $field->name . "' as Field, '" . $field->type . "' as Type, '" . $null . "' as 'Null', '" . $pk . "' as Key, " . $default . " as 'Default', '' as Extra";
                 }
                 //$statement = $tmp;
                 return $tmp;
@@ -748,7 +771,7 @@ class PDODB extends \wpdb {
         }
         return null;
     }
-    
+
     /**
      * Method to strip column after
      *
@@ -765,12 +788,12 @@ class PDODB extends \wpdb {
                 $temp = str_replace('(', '', $statement);
                 $temp = str_replace(')', '', $temp);
                 list($fields, $values) = explode(' VALUES ', $temp);
-                
+
                 $tmp = explode(' ', $fields, 4);
                 $tmp = array_filter($tmp);
                 $table = $tmp[2];
                 $table = str_replace('`', '', $table);
-                
+
                 $fields = explode(',', end($tmp));
                 $values = explode(',', $values);
                 $values = array_filter($values);
@@ -780,10 +803,10 @@ class PDODB extends \wpdb {
                         $values[$field] = $values[$key];
                     }
                 }
-                
+
                 $tmp = explode('VALUES(', $keys);
                 $pks = [];
-                foreach($tmp as $key => $value) {
+                foreach ($tmp as $key => $value) {
                     if ($key) {
                         list($field, $more) = explode(')', $value, 2);
                         $field = trim(str_replace('`', '', $field));
@@ -791,25 +814,26 @@ class PDODB extends \wpdb {
                     }
                 }
                 //var_dump($pks); var_dump($values); die();
-                $delete = 'DELETE FROM '.$table.' WHERE ';
+                $delete = 'DELETE FROM ' . $table . ' WHERE ';
                 $where = '';
                 foreach ($pks as $key => $pk) {
-                    if ($where) $where .= ' AND ';
+                    if ($where)
+                        $where .= ' AND ';
                     if (!empty($values[$pk])) {
-                       $where .= $pk.' = '.$values[$pk];
+                        $where .= $pk . ' = ' . $values[$pk];
                     }
                 }
                 if ($where) {
-                    $statement = $delete.$where.';'.$statement;   
+                    $statement = $delete . $where . ';' . $statement;
                     //do_action('sqlite-db/log', $statement);
                     //var_dump($statement); die();
                     return $statement;
-                }            
+                }
             }
         }
         return null;
     }
-    
+
     /**
      * Method to strip column after
      *
@@ -823,26 +847,27 @@ class PDODB extends \wpdb {
             if (count($tmp) > 1) {
                 $statement = reset($tmp);
                 list($pre, $more) = explode(' ADD ', $statement, 2);
-                
+
                 $tmp = explode(' ', $pre);
                 $tmp = array_filter($tmp);
                 $table = end($tmp);
                 $table = str_replace('`', '', $table);
-                
+
                 $tmp = explode(' ', $more);
                 $tmp = array_filter($tmp);
                 $field = reset($tmp);
                 $field = str_replace('`', '', $field);
-                
+
                 $pks = $this->get_pk($table);
                 $where = '';
                 foreach ($pks as $pk) {
-                    if ($where) $where .= ' AND ';
-                    $where .= $pk.' = old.'.$pk;
+                    if ($where)
+                        $where .= ' AND ';
+                    $where .= $pk . ' = old.' . $pk;
                 }
-                
-                $trigger = "CREATE TRIGGER [Update".$field."] AFTER UPDATE ON ".$table." FOR EACH ROW BEGIN UPDATE ".$table." SET ".$field." = ".$value." WHERE ".$where."; END";
-                $statement .= ';'.$trigger;
+
+                $trigger = "CREATE TRIGGER [Update" . $field . "] AFTER UPDATE ON " . $table . " FOR EACH ROW BEGIN UPDATE " . $table . " SET " . $field . " = " . $value . " WHERE " . $where . "; END";
+                $statement .= ';' . $trigger;
                 //do_action('sqlite-db/log', $statement);
                 //var_dump($statement); die();
                 return $statement;
@@ -850,19 +875,19 @@ class PDODB extends \wpdb {
         }
         return null;
     }
-    
+
     // Returns an array of columns by which rows can be uniquely adressed.
     // For tables with a rowid column, this is always array('rowid')
     // for tables without rowid, this is an array of the primary key columns. 
     public function get_pk($table) {
-        $sql = 'SELECT l.name FROM pragma_table_info("'.$table.'") as l WHERE l.pk <> 0;';
-        $indices = $this->dbh->query( $sql, \PDO::FETCH_ASSOC );
+        $sql = 'SELECT l.name FROM pragma_table_info("' . $table . '") as l WHERE l.pk <> 0;';
+        $indices = $this->dbh->query($sql, \PDO::FETCH_ASSOC);
         //var_dump($indices); die();
         //$indices = $query->fetchAll();
         //$indices = $this->dbh->get_keys( $table, true);
         return reset($indices);
     }
-    
+
     /**
      * Method to strip column after
      *
@@ -883,7 +908,7 @@ class PDODB extends \wpdb {
                     $field = str_replace(' ', '', $field);
                     $field = str_replace(')', '', $field);
                     if ($field) {
-                        switch($field) {
+                        switch ($field) {
                             case 'version_comment':
                                 $vars[$field] = 'SQLite (PDO)';
                                 break;
@@ -900,7 +925,7 @@ class PDODB extends \wpdb {
                     if ($statement) {
                         $statement .= ' UNION ';
                     }
-                    $statement .= "SELECT '".$akey."' as Variable_name, '".$avar."' as Value";
+                    $statement .= "SELECT '" . $akey . "' as Variable_name, '" . $avar . "' as Value";
                 }
                 //var_dump($statement); die();
                 return $statement;
@@ -908,7 +933,7 @@ class PDODB extends \wpdb {
         }
         return null;
     }
-    
+
     /**
      * Method to strip column after
      *
@@ -940,7 +965,7 @@ class PDODB extends \wpdb {
         }
         return $statement;
     }
-    
+
     /**
      * Method to strip column after
      *
@@ -955,11 +980,12 @@ class PDODB extends \wpdb {
                 $more = end($tmp);
                 $more = str_replace(' DESC', ' ASC', $more);
                 $tmp = explode(' ASC', $more);
-                $statement = $pre.end($tmp);
+                $statement = $pre . end($tmp);
             }
         }
         return $statement;
     }
+
     /**
      * Method to strip column after
      *
@@ -1029,7 +1055,6 @@ class PDODB extends \wpdb {
         }
         return $query;
     }
-
 }
 
 /*
